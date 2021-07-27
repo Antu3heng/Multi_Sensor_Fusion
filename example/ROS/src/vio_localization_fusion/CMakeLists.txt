@@ -54,3 +54,11 @@ target_link_libraries(t265_localization_fusion_node
   ${catkin_LIBRARIES}
   ${LIBS}
 )
+
+add_executable(t265_fusion_node 
+src/t265_fusion.cpp)
+
+target_link_libraries(t265_fusion_node
+  ${catkin_LIBRARIES}
+  ${LIBS}
+  )

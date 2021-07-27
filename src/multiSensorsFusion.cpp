@@ -165,7 +165,7 @@ void MSF::inputIMU(const double &timestamp, const Vector3d &imuAccRaw, const Vec
         F.block<3, 3>(3, 6) = -R * skew_symmetric(acc) * dt;
         F.block<3, 3>(3, 9) = -R * dt;
         F.block<3, 3>(3, 15) = Matrix3d::Identity() * dt;
-        F.block<3, 3>(6, 6) = Matrix3d::Identity() * dt - skew_symmetric(gyro) * dt;
+        F.block<3, 3>(6, 6) = Matrix3d::Identity() - skew_symmetric(gyro) * dt;
         // F.block<3, 3>(6, 6) = R.transpose() * skew_symmetric(gyro) * dt;
         F.block<3, 3>(6, 12) = -Matrix3d::Identity() * dt;
         // Matrix Q
@@ -306,9 +306,9 @@ void MSF::inputMapPose(const double &timestamp, const Vector3d &mapPosRaw, const
             // Matrix R
             MatrixXd R_VioTMap = MatrixXd::Zero(6, 6);
             R_VioTMap.block<3, 3>(0, 0) = Matrix3d::Identity() * 0.2 * 0.2;
-//            R_VioTMap.block<3, 3>(0, 0) = pose_kf_.getUncertainty().block<3, 3>(0, 0);
+            // R_VioTMap.block<3, 3>(0, 0) = pose_kf_.getUncertainty().block<3, 3>(0, 0);
             R_VioTMap.block<3, 3>(3, 3) = Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
-//            R_VioTMap.block<3, 3>(3, 3) = pose_kf_.getUncertainty().block<3, 3>(6, 6);
+            // R_VioTMap.block<3, 3>(3, 3) = pose_kf_.getUncertainty().block<3, 3>(6, 6);
             VioTMap_kf_.update(dz_VioTMap, H_VioTMap, R_VioTMap);
 
             // update the states

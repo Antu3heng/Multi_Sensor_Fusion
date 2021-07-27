@@ -7,3 +7,4 @@ example/ROS/.catkin_tools
 example/ROS/devel
 example/ROS/build
 example/ROS/logs
+lib

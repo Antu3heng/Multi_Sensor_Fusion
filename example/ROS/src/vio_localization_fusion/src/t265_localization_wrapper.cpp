@@ -20,7 +20,7 @@ t265_localization_wrapper::t265_localization_wrapper(ros::NodeHandle &nh)
     globalOdom_pub = nh.advertise<nav_msgs::Odometry>("/MSF/odom/global", 10);
 
     imu_sub = nh.subscribe("/d400/imu", 10, &t265_localization_wrapper::imuCallback, this, ros::TransportHints().tcpNoDelay());
-    t265_sub = nh.subscribe("/t265/odom/sample30", 10, &t265_localization_wrapper::t265Callback, this, ros::TransportHints().tcpNoDelay());
+    t265_sub = nh.subscribe("/t265/odom/sample", 10, &t265_localization_wrapper::t265Callback, this, ros::TransportHints().tcpNoDelay());
     mapLoc_sub = nh.subscribe("/mapLoc/pose", 10, &t265_localization_wrapper::mapLocCallback, this, ros::TransportHints().tcpNoDelay());
 
     state_timer = nh.createTimer(ros::Duration(0.005), &t265_localization_wrapper::fusionStateCallback, this);
