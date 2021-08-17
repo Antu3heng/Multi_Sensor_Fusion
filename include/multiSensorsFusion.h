@@ -17,8 +17,9 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <queue>
+#include <map>
 #include "baseKF.h"
-#include "utils.h"
+#include "msf_utils.h"
 
 using namespace std;
 using namespace Eigen;
@@ -26,8 +27,14 @@ using namespace Eigen;
 namespace multiSensorFusion
 {
 
+enum msgType {vioMsg, mapPoseMsg};
+
+
+
 struct vioMapFusionStates
 {
+    double timestamp_;
+
     // states
     // p, v, q, ba, bw, g
     Vector3d pos_;
@@ -37,24 +44,24 @@ struct vioMapFusionStates
     Vector3d bw_;
     Vector3d gravity_;
 
-    Vector3d imuAcc;
-    Vector3d imuGyro;
+    Vector3d imuAcc_;
+    Vector3d imuGyro_;
 };
 
 struct VioOdomMsg
 {
-    double timestamp;
-    Vector3d vioPosRaw;
-    Vector3d vioVelRaw;
-    Quaterniond vioRotRaw;
-    Matrix<double, 9, 9> vioCovariance;
+    double timestamp_;
+    Vector3d vioPosRaw_;
+    Vector3d vioVelRaw_;
+    Quaterniond vioRotRaw_;
+    Matrix<double, 9, 9> vioCovariance_;
 };
 
 struct MapPoseMsg
 {
-    double timestamp;
-    Vector3d mapPosRaw;
-    Quaterniond mapRotRaw;
+    double timestamp_;
+    Vector3d mapPosRaw_;
+    Quaterniond mapRotRaw_;
 };
 
 class MSF
@@ -121,6 +128,14 @@ private:
     double n_a_, n_w_, n_ba_, n_bw_;
     // map-based localization error 
     double n_p_map_, n_q_map_;
+
+    // buffer and its parameters
+    map<double, vioMapFusionStates> stateBuffer_;
+    map<double, msgType> msgIndexBuffer_;
+    map<double, VioOdomMsg> vioBuffer_;
+    map<double, MapPoseMsg> mapPoseBuffer_;
+    const int stateBufferSize_ = 1000;
+    const int msgBufferSize_ = 100;
 };
 
 } // namespace multiSensorFusion
