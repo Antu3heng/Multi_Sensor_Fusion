@@ -20,12 +20,13 @@
 
 namespace multiSensorFusion
 {
-
     class msf_imu_processor
     {
     public:
+        msf_imu_processor();
+
         msf_imu_processor(const double &n_a, const double &n_w, const double &n_ba, const double &n_bw,
-                          const Eigen::Vector3d &g);
+                          Eigen::Vector3d g);
 
         ~msf_imu_processor() = default;
 
@@ -39,7 +40,6 @@ namespace multiSensorFusion
         double n_a_, n_w_, n_ba_, n_bw_;
         Eigen::Vector3d g_;
     };
-
 }
 
 #endif //MULTI_SENSOR_FUSION_MSF_IMU_PROCESSOR_H

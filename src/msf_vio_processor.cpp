@@ -13,6 +13,12 @@
 
 namespace multiSensorFusion
 {
+    msf_vio_processor::msf_vio_processor()
+    {
+        imu_p_vio_ = Eigen::Vector3d::Zero();
+        imu_q_vio_ = Eigen::Quaterniond::Identity();
+        update_transformation_ = false;
+    }
 
     msf_vio_processor::msf_vio_processor(const Eigen::Vector3d &imu_p_vio, const Eigen::Quaterniond &imu_q_vio,
                                          bool update_transformation = false)
@@ -21,23 +27,25 @@ namespace multiSensorFusion
 
     void msf_vio_processor::updateState(baseState &currentState, const vioData &data)
     {
-        if(update_transformation_)
+        if (update_transformation_)
         {
 
         }
 
         // residuals
         Eigen::VectorXd dz = Eigen::VectorXd::Zero(9);
-        dz.segment(0, 3) = data.pos_ - currentState.pos_;
-        dz.segment(3, 3) = data.vel_ - currentState.vel_;
-        Eigen::Quaterniond dq = currentState.q_.conjugate() * data.q_;
+        dz.segment(0, 3) = data.pos_ - imu_q_vio_.conjugate() * (currentState.pos_ - imu_p_vio_);
+        dz.segment(3, 3) = data.vel_ - imu_q_vio_.conjugate() * currentState.vel_;
+        Eigen::Quaterniond dq = (imu_q_vio_.conjugate() * currentState.q_).conjugate() * data.q_;
         // dz.segment(6, 3) = dq.vec() / dq.w() * 2.0;
         Eigen::AngleAxisd dtheta(dq);
         dz.segment(6, 3) = dtheta.axis() * dtheta.angle();
 
         // Matrix H
         Eigen::MatrixXd H = Eigen::MatrixXd::Zero(9, 15);
-        H.block<9, 9>(0, 0) = Eigen::Matrix<double, 9, 9>::Identity();
+        H.block<3, 3>(0, 0) = imu_q_vio_.conjugate().toRotationMatrix();
+        H.block<3, 3>(3, 3) = imu_q_vio_.conjugate().toRotationMatrix();
+        H.block<3, 3>(6, 6) = Eigen::Matrix3d::Identity();
 
         // Matrix R
         Eigen::MatrixXd R = data.cov_;
@@ -66,5 +74,4 @@ namespace multiSensorFusion
         G.block<3, 3>(6, 6) -= skew_symmetric(0.5 * delta_states.segment(6, 3));
         currentState.cov_ = G * currentState.cov_ * G.transpose();
     }
-
 }

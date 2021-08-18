@@ -12,7 +12,8 @@
 #ifndef MULTI_SENSOR_FUSION_MSF_INITIALIZER_H
 #define MULTI_SENSOR_FUSION_MSF_INITIALIZER_H
 
-#include <deque>
+#include <iostream>
+#include <map>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
@@ -21,7 +22,6 @@
 
 namespace multiSensorFusion
 {
-
     class msf_initializer
     {
     public:
@@ -41,12 +41,11 @@ namespace multiSensorFusion
         Eigen::Vector3d init_imu_p_vio_;
         Eigen::Quaterniond init_imu_q_vio_;
 
-        std::deque<imuData> imu_buffer_;
+        std::map<double, imuData> imu_buffer_;
 
-        const int nImuBuffer_ = 100;
-        const double ImuAccStdLimit_ = 3.0;
+        const int nImuBuffer_ = 200;
+        // const double ImuAccStdLimit_ = 3.0;
     };
-
 }
 
 #endif //MULTI_SENSOR_FUSION_MSF_INITIALIZER_H

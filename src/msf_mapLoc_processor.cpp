@@ -13,8 +13,17 @@
 
 namespace multiSensorFusion
 {
+    msf_mapLoc_processor::msf_mapLoc_processor()
+    {
+        imu_p_map_ = Eigen::Vector3d::Zero();
+        imu_q_map_ = Eigen::Quaterniond::Identity();
+        update_transformation_ = false;
+        n_pos_ = 0.2;
+        n_q_ = 5.;
+    }
 
-    msf_mapLoc_processor::msf_mapLoc_processor(const Eigen::Vector3d &imu_p_map, const Eigen::Quaterniond &imu_q_map, double n_pos,
+    msf_mapLoc_processor::msf_mapLoc_processor(const Eigen::Vector3d &imu_p_map, const Eigen::Quaterniond &imu_q_map,
+                                               double n_pos,
                                                double n_q, bool update_transformation = false)
             : imu_p_map_(imu_p_map), imu_q_map_(imu_q_map), update_transformation_(update_transformation),
               n_pos_(n_pos), n_q_(n_q)

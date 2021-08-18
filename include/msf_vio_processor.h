@@ -20,10 +20,11 @@
 
 namespace multiSensorFusion
 {
-
     class msf_vio_processor
     {
     public:
+        msf_vio_processor();
+
         msf_vio_processor(const Eigen::Vector3d &imu_p_vio, const Eigen::Quaterniond &imu_q_vio,
                           bool update_transformation);
 
@@ -39,7 +40,6 @@ namespace multiSensorFusion
 
         bool update_transformation_;
     };
-
 }
 
 #endif //MULTI_SENSOR_FUSION_MSF_VIO_PROCESSOR_H

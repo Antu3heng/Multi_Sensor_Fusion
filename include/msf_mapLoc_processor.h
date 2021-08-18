@@ -20,10 +20,11 @@
 
 namespace multiSensorFusion
 {
-
     class msf_mapLoc_processor
     {
     public:
+        msf_mapLoc_processor();
+
         msf_mapLoc_processor(const Eigen::Vector3d &imu_p_map, const Eigen::Quaterniond &imu_q_map, double n_pos,
                              double n_q, bool update_transformation);
 
@@ -43,7 +44,6 @@ namespace multiSensorFusion
         // unit: n_pos_-m n_q_-degree
         double n_pos_, n_q_;;
     };
-
 }
 
 #endif //MULTI_SENSOR_FUSION_MSF_MAPLOC_PROCESSOR_H

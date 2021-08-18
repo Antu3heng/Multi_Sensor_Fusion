@@ -21,28 +21,34 @@ using namespace Eigen;
 
 namespace multiSensorFusion
 {
+    class baseKF
+    {
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-class baseKF
-{
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    public:
+        baseKF() = default;;
 
-public:
-    baseKF()= default;;
-    explicit baseKF(int nStates);
-    ~baseKF()= default;;
-    void init(const MatrixXd &P);
-    void predict(const MatrixXd &F, const MatrixXd &Q);
-    void update(const VectorXd &dz, const MatrixXd &H, const MatrixXd &R);
-    void resetESKF(const MatrixXd &G);
-    VectorXd getDeltaStates() const;
-    MatrixXd getUncertainty() const;
+        explicit baseKF(int nStates);
 
-private:
-    int nStates_;
-    MatrixXd P_;
-    VectorXd delta_states_;
-};
+        ~baseKF() = default;;
 
+        void init(const MatrixXd &P);
+
+        void predict(const MatrixXd &F, const MatrixXd &Q);
+
+        void update(const VectorXd &dz, const MatrixXd &H, const MatrixXd &R);
+
+        void resetESKF(const MatrixXd &G);
+
+        VectorXd getDeltaStates() const;
+
+        MatrixXd getUncertainty() const;
+
+    private:
+        int nStates_;
+        MatrixXd P_;
+        VectorXd delta_states_;
+    };
 } // namespace multiSensorFusion
 
 #endif //FUSION_BASE_KF_H_
