@@ -35,6 +35,21 @@ namespace multiSensorFusion
         }
     }
 
+    void msf_mapLoc_processor::getInitTransformation(const baseState &state, const mapLocData &data)
+    {
+        Eigen::Isometry3d map_T_i = Eigen::Isometry3d::Identity(), imu_T_i = Eigen::Isometry3d::Identity();
+        map_T_i.rotate(data.q_);
+        map_T_i.pretranslate(data.pos_);
+        imu_T_i.rotate(state.q_);
+        imu_T_i.pretranslate(state.pos_);
+        Eigen::Isometry3d imu_T_map = imu_T_i * map_T_i.inverse();
+        imu_p_map_ = imu_T_map.translation();
+        imu_q_map_ = imu_T_map.linear();
+        n_pos_ = 0.2;
+        n_q_ = 5.;
+        update_transformation_ = true;
+    }
+
     void msf_mapLoc_processor::updateState(baseState &currentState, const mapLocData &data)
     {
         if (update_transformation_)
@@ -54,9 +69,9 @@ namespace multiSensorFusion
             // Matrix R
             Eigen::MatrixXd R_transform = Eigen::MatrixXd::Zero(6, 6);
             R_transform.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.2 * 0.2;
-            // R_VioTMap.block<3, 3>(0, 0) = currentState.cov_.block<3, 3>(0, 0);
+            // R_transform.block<3, 3>(0, 0) = currentState.cov_.block<3, 3>(0, 0);
             R_transform.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
-            // R_VioTMap.block<3, 3>(3, 3) = currentState.cov_.block<3, 3>(6, 6);
+            // R_transform.block<3, 3>(3, 3) = currentState.cov_.block<3, 3>(6, 6);
 
             // update the transformation from VIO to IMU and the covariance
             Eigen::MatrixXd S_transform = H_transform * cov_ * H_transform.transpose() + R_transform;
@@ -114,5 +129,13 @@ namespace multiSensorFusion
         Eigen::MatrixXd G = Eigen::MatrixXd::Identity(15, 15);
         G.block<3, 3>(6, 6) -= skew_symmetric(0.5 * delta_states.segment(6, 3));
         currentState.cov_ = G * currentState.cov_ * G.transpose();
+    }
+
+    void msf_mapLoc_processor::transformStateToMap(baseState &state)
+    {
+        state.isWithMap_ = true;
+        state.posInMap_ = imu_q_map_.conjugate() * (state.pos_ - imu_p_map_);
+        state.velInMap_ = imu_q_map_.conjugate() * state.vel_;
+        state.qInMap_ = imu_q_map_.conjugate() * state.q_;
     }
 }

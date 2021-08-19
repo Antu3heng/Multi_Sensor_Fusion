@@ -42,13 +42,13 @@ include_directories(
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
 add_library(${PROJECT_NAME} SHARED
+        src/msf_core.cpp
         src/multiSensorsFusion.cpp
         src/imuGPSFusion.cpp
         src/baseKF.cpp
         src/msf_imu_processor.cpp
         src/msf_vio_processor.cpp
         src/msf_mapLoc_processor.cpp
-        src/msf_initializer.cpp
-        src/msf_core.cpp)
+        src/msf_initializer.cpp)
 
 target_link_libraries(${PROJECT_NAME} libGeographiccc)

@@ -34,6 +34,8 @@ namespace multiSensorFusion
 
         ~msf_core() = default;
 
+        bool isInitialized() const;
+
         void inputIMU(const imuData &data);
 
         void inputVIO(const vioData &data);
@@ -51,6 +53,7 @@ namespace multiSensorFusion
         std::shared_ptr<msf_mapLoc_processor> mapLocProcessor_;
 
         bool initialized_;
+        bool isWithMap_;
 
         baseState currentState_;
 

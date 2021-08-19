@@ -30,7 +30,11 @@ namespace multiSensorFusion
 
         ~msf_mapLoc_processor() = default;
 
+        void getInitTransformation(const baseState &state, const mapLocData &data);
+
         void updateState(baseState &currentState, const mapLocData &data);
+
+        void transformStateToMap(baseState &state);
 
     private:
         // the transformation from VIO to IMU

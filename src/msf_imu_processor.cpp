@@ -23,31 +23,31 @@ namespace multiSensorFusion
             : n_a_(n_a), n_w_(n_w), n_ba_(n_ba), n_bw_(n_bw), g_(g)
     {}
 
-    void msf_imu_processor::predictState(const baseState &lastState, baseState &currentState)
+    void msf_imu_processor::predictState(const baseStatePtr &lastState, baseStatePtr &currentState) const
     {
-        double dt = currentState.timestamp_ - lastState.timestamp_;
-        Eigen::Vector3d acc = 0.5 * (lastState.imuData_.acc_ + currentState.imuData_.acc_) - lastState.ba_;
-        Eigen::Vector3d gyro = 0.5 * (lastState.imuData_.gyro_ + currentState.imuData_.gyro_) - lastState.bw_;
+        double dt = currentState->timestamp_ - lastState->timestamp_;
+        Eigen::Vector3d acc = 0.5 * (lastState->imuData_->acc_ + currentState->imuData_->acc_) - lastState->ba_;
+        Eigen::Vector3d gyro = 0.5 * (lastState->imuData_->gyro_ + currentState->imuData_->gyro_) - lastState->bw_;
         Eigen::Vector3d theta = gyro * dt;
 
         // attitude
         Eigen::Quaterniond dq = getQuaternionFromAngle(theta);
-        currentState.q_ = lastState.q_ * dq;
-        Eigen::Matrix3d R = currentState.q_.toRotationMatrix();
+        currentState->q_ = lastState->q_ * dq;
+        Eigen::Matrix3d R = currentState->q_.toRotationMatrix();
         // velocity
-        Eigen::Vector3d deltaVel = (currentState.q_ * acc + g_) * dt;
-        currentState.vel_ = lastState.vel_ + deltaVel;
+        Eigen::Vector3d deltaVel = (currentState->q_ * acc + g_) * dt;
+        currentState->vel_ = lastState->vel_ + deltaVel;
         // position
-        currentState.pos_ = lastState.pos_ + 0.5 * (lastState.vel_ + currentState.vel_) * dt;
+        currentState->pos_ = lastState->pos_ + 0.5 * (lastState->vel_ + currentState->vel_) * dt;
     }
 
-    void msf_imu_processor::propagateCov(const baseState &lastState, baseState &currentState)
+    void msf_imu_processor::propagateCov(const baseStatePtr &lastState, baseStatePtr &currentState) const
     {
-        double dt = currentState.timestamp_ - lastState.timestamp_;
-        Eigen::Vector3d acc = 0.5 * (lastState.imuData_.acc_ + currentState.imuData_.acc_) - lastState.ba_;
-        Eigen::Vector3d gyro = 0.5 * (lastState.imuData_.gyro_ + currentState.imuData_.gyro_) - lastState.bw_;
+        double dt = currentState->timestamp_ - lastState->timestamp_;
+        Eigen::Vector3d acc = 0.5 * (lastState->imuData_->acc_ + currentState->imuData_->acc_) - lastState->ba_;
+        Eigen::Vector3d gyro = 0.5 * (lastState->imuData_->gyro_ + currentState->imuData_->gyro_) - lastState->bw_;
         Eigen::Vector3d theta = gyro * dt;
-        Eigen::Matrix3d R = currentState.q_.toRotationMatrix();
+        Eigen::Matrix3d R = currentState->q_.toRotationMatrix();
 
         // propagate the covariance
         // TODO: consider use the diff to calculate the jacobi
@@ -74,7 +74,7 @@ namespace multiSensorFusion
         Qi.block<3, 3>(6, 6) = Eigen::Matrix3d::Identity() * n_ba_ * n_ba_;
         Qi.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity() * n_bw_ * n_bw_;
         Eigen::MatrixXd Q = Fi * Qi * Fi.transpose();
-        currentState.cov_ = F * lastState.cov_ * F.transpose() + Q;
+        currentState->cov_ = F * lastState->cov_ * F.transpose() + Q;
     }
 }
 

@@ -12,6 +12,7 @@
 #ifndef MULTI_SENSOR_FUSION_MSF_TYPE_H
 #define MULTI_SENSOR_FUSION_MSF_TYPE_H
 
+#include <memory>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
@@ -32,6 +33,7 @@ namespace multiSensorFusion
         Eigen::Vector3d acc_;
         Eigen::Vector3d gyro_;
     };
+    using imuDataPtr = std::shared_ptr<imuData>;
 
     struct vioData
     {
@@ -41,6 +43,7 @@ namespace multiSensorFusion
         Eigen::Quaterniond q_;
         Eigen::Matrix<double, 9, 9> cov_;
     };
+    using vioDataPtr = std::shared_ptr<vioData>;
 
     struct mapLocData
     {
@@ -48,6 +51,7 @@ namespace multiSensorFusion
         Eigen::Vector3d pos_;
         Eigen::Quaterniond q_;
     };
+    using mapLocDataPtr = std::shared_ptr<mapLocData>;
 
     struct gpsData
     {
@@ -55,6 +59,7 @@ namespace multiSensorFusion
         Eigen::Vector3d lla_;
         Eigen::Matrix3d cov_;
     };
+    using gpsDataPtr = std::shared_ptr<gpsData>;
 
     struct baseState
     {
@@ -68,8 +73,14 @@ namespace multiSensorFusion
 
         Eigen::Matrix<double, 15, 15> cov_;
 
-        imuData imuData_;
+        bool isWithMap_;
+        Eigen::Vector3d posInMap_;
+        Eigen::Vector3d velInMap_;
+        Eigen::Quaterniond qInMap_;
+
+        imuDataPtr imuData_;
     };
+    using baseStatePtr = std::shared_ptr<baseState>;
 }
 
 #endif //MULTI_SENSOR_FUSION_MSF_TYPE_H

@@ -60,6 +60,8 @@ namespace multiSensorFusion
         currentState.cov_.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity() * 0.1 * 0.1;
         currentState.cov_.block<3, 3>(12, 12) = Eigen::Matrix3d::Identity() * 0.01 * 0.01;
 
+        currentState.isWithMap_ = false;
+
         return true;
     }
 }

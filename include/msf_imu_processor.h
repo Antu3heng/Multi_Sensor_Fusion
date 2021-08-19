@@ -30,9 +30,9 @@ namespace multiSensorFusion
 
         ~msf_imu_processor() = default;
 
-        void predictState(const baseState &lastState, baseState &currentState);
+        void predictState(const baseStatePtr &lastState, baseStatePtr &currentState) const;
 
-        void propagateCov(const baseState &lastState, baseState &currentState);
+        void propagateCov(const baseStatePtr &lastState, baseStatePtr &currentState) const;
 
     private:
         // imu noise parameters
