@@ -36,16 +36,18 @@ namespace multiSensorFusion
 
         bool isInitialized() const;
 
-        void inputIMU(const imuData &data);
+        void inputIMU(const imuDataPtr &data);
 
-        void inputVIO(const vioData &data);
+        void inputVIO(const vioDataPtr &data);
 
-        void inputMapLoc(const mapLocData &data);
+        void inputMapLoc(const mapLocDataPtr &data);
 
-        baseState outputState() const;
+        baseState outputCurrentState();
 
     private:
-        void applyMeasurement();
+        bool addSensorData(sensorType type, const double &timestamp);
+
+        void applyMeasurement(const double &timestamp);
 
         std::shared_ptr<msf_initializer> initializer_;
         std::shared_ptr<msf_imu_processor> imuProcessor_;
@@ -55,13 +57,14 @@ namespace multiSensorFusion
         bool initialized_;
         bool isWithMap_;
 
-        baseState currentState_;
+        baseStatePtr currentState_;
 
-        std::map<double, baseState> state_buffer_;
+        std::map<double, baseStatePtr> state_buffer_;
 
-        std::map<double, sensorType> measurement_buffer_;
-        std::map<double, vioData> vioData_buffer_;
-        std::map<double, mapLocData> mapLocData_buffer_;
+        std::map<double, sensorType> sensorData_buffer_;
+        // std::map<double, sensorType> forwardSensorData_buffer_;
+        std::map<double, vioDataPtr> vioData_buffer_;
+        std::map<double, mapLocDataPtr> mapLocData_buffer_;
     };
 }
 
