@@ -70,8 +70,9 @@ namespace multiSensorFusion
         Eigen::Quaterniond q_;
         Eigen::Vector3d ba_;
         Eigen::Vector3d bw_;
+        Eigen::Vector3d g_;
 
-        Eigen::Matrix<double, 15, 15> cov_;
+        Eigen::Matrix<double, 18, 18> cov_;
 
         bool isWithMap_;
         Eigen::Vector3d posInMap_;

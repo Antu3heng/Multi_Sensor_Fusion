@@ -103,7 +103,7 @@ namespace multiSensorFusion
 
         // update the covariance and the error state
         // Matrix H
-        Eigen::MatrixXd H = Eigen::MatrixXd::Zero(6, 15);
+        Eigen::MatrixXd H = Eigen::MatrixXd::Zero(6, 18);
         H.block<3, 3>(0, 0) = imu_q_map_.conjugate().toRotationMatrix();
         H.block<3, 3>(3, 6) = Eigen::Matrix3d::Identity();
 
@@ -116,9 +116,10 @@ namespace multiSensorFusion
         // update the states and the covariance
         Eigen::MatrixXd S = H * currentState->cov_ * H.transpose() + R;
         Eigen::MatrixXd K = currentState->cov_ * H.transpose() * S.inverse();
-        Eigen::MatrixXd I = Eigen::MatrixXd::Identity(15, 15);
+        Eigen::MatrixXd I = Eigen::MatrixXd::Identity(18, 18);
         // currentState->cov_ = (I - K * H) * currentState->cov_;
         currentState->cov_ = (I - K * H) * currentState->cov_ * (I - K * H).transpose() + K * R * K.transpose();
+
         Eigen::VectorXd delta_states = K * dz;
         currentState->pos_ += delta_states.segment(0, 3);
         currentState->vel_ += delta_states.segment(3, 3);
@@ -126,9 +127,10 @@ namespace multiSensorFusion
         currentState->q_ *= delta_q;
         currentState->ba_ += delta_states.segment(9, 3);
         currentState->bw_ += delta_states.segment(12, 3);
+        currentState->g_ += delta_states.segment(15, 3);
 
         // ESKF reset
-        Eigen::MatrixXd G = Eigen::MatrixXd::Identity(15, 15);
+        Eigen::MatrixXd G = Eigen::MatrixXd::Identity(18, 18);
         G.block<3, 3>(6, 6) -= skew_symmetric(0.5 * delta_states.segment(6, 3));
         currentState->cov_ = G * currentState->cov_ * G.transpose();
     }

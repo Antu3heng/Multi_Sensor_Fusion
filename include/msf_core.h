@@ -61,7 +61,6 @@ namespace multiSensorFusion
 
         std::map<double, baseStatePtr> state_buffer_;
 
-        std::map<double, sensorType> sensorData_buffer_;
         std::map<double, sensorType> measurement_buffer_;
         // std::map<double, sensorType> futureMeasurement_buffer_;
         std::map<double, vioDataPtr> vioData_buffer_;

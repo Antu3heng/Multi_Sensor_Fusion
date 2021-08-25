@@ -33,19 +33,12 @@ namespace multiSensorFusion
         if (!isInitialized())
         {
             initializer_->addIMU(data);
-            // std::cerr << "[msf_core]: Waiting for initializing the filter..." << std::endl;
         } else
         {
-            // addMeasurement(IMU, data->timestamp_);
-
             currentState_ = std::make_shared<baseState>();
             currentState_->timestamp_ = data->timestamp_;
             currentState_->imuData_ = data;
-
-            // imuProcessor_->predictState((--(state_buffer_.end()))->second, currentState_);
-            // imuProcessor_->propagateCov((--(state_buffer_.end()))->second, currentState_);
             imuProcessor_->predict((--(state_buffer_.end()))->second, currentState_);
-
             state_buffer_.insert(std::pair<double, baseStatePtr>(currentState_->timestamp_, currentState_));
         }
     }
@@ -56,8 +49,8 @@ namespace multiSensorFusion
         {
             if (initializer_->initializeUsingVIO(data, currentState_))
             {
+                std::cerr << "[msf_core]: The MSF has been initialized!" << std::endl;
                 initialized_ = true;
-                addMeasurement(IMU, currentState_->timestamp_);
                 state_buffer_.insert(std::pair<double, baseStatePtr>(currentState_->timestamp_, currentState_));
             }
         } else
@@ -72,19 +65,20 @@ namespace multiSensorFusion
 
     void msf_core::inputMapLoc(const mapLocDataPtr &data)
     {
-        if (!isInitialized())
-            std::cerr << "[msf_core]: Waiting for initializing the filter..." << std::endl;
-        else
+        if (isInitialized())
         {
             if (!isWithMap_)
             {
                 auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
-                if (fabs(it->first - data->timestamp_) > 0.003)
+                if (it != state_buffer_.end() && fabs(it->first - data->timestamp_) > 0.003)
                     std::cerr
                             << "[msf_core]: Map pose and IMU's timestamps are not synchronized, which can't be used to get the map!"
                             << std::endl;
                 else
+                {
                     mapLocProcessor_->getInitTransformation(it->second, data);
+                    isWithMap_ = true;
+                }
             } else
             {
                 if (addMeasurement(MapLoc, data->timestamp_))
@@ -99,7 +93,8 @@ namespace multiSensorFusion
     baseState msf_core::outputCurrentState()
     {
         currentState_ = (--state_buffer_.end())->second;
-        mapLocProcessor_->transformStateToMap(currentState_);
+        if (isWithMap_)
+            mapLocProcessor_->transformStateToMap(currentState_);
         return *currentState_;
     }
 
@@ -111,15 +106,15 @@ namespace multiSensorFusion
             auto it = state_buffer_.lower_bound(timestamp - 0.003);
             if (it == state_buffer_.end())
             {
-                std::cerr << "[msf_core]: The new measurement is forward the states!" << std::endl;
+                // std::cerr << "[msf_core]: The new measurement is forward the states!" << std::endl;
                 // futureMeasurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
                 return false;
             } else
             {
                 if (fabs(it->first - timestamp) > 0.003)
                 {
-                    std::cerr << "[msf_core]: The new measurement and states' timestamps are not synchronized!"
-                              << std::endl;
+                    // std::cerr << "[msf_core]: The new measurement and states' timestamps are not synchronized!"
+                    //           << std::endl;
                     return false;
                 } else
                 {
@@ -141,20 +136,11 @@ namespace multiSensorFusion
         {
             while (itState != state_buffer_.lower_bound(itSensor->first - 0.003))
             {
-                imuProcessor_->predict(itState->second, (++itState)->second);
+                auto itLastState = itState;
+                imuProcessor_->predict(itLastState->second, (++itState)->second);
             }
             switch (itSensor->second)
             {
-                // case IMU:
-                // {
-                //     if (itState != state_buffer_.begin())
-                //     {
-                //         auto itStateNow = itState;
-                //         imuProcessor_->predictState((--itState)->second, itStateNow->second);
-                //         imuProcessor_->propagateCov(itState->second, itStateNow->second);
-                //     }
-                //     break;
-                // }
                 case VIO:
                 {
                     vioProcessor_->updateState(itState->second, vioData_buffer_.find(itSensor->first)->second);
@@ -163,12 +149,16 @@ namespace multiSensorFusion
                 case MapLoc:
                 {
                     mapLocProcessor_->updateState(itState->second, mapLocData_buffer_.find(itSensor->first)->second);
-                    std::cout << "MapLoc update!!!" << std::endl;
                     break;
                 }
                 default:
                     break;
             }
+        }
+        while (itState != (--state_buffer_.end()))
+        {
+            auto itLastState = itState;
+            imuProcessor_->predict(itLastState->second, (++itState)->second);
         }
     }
 }

@@ -41,29 +41,40 @@ namespace multiSensorFusion
         }
 
         auto it = imu_buffer_.lower_bound(data->timestamp_ - 0.003);
-        if (it != imu_buffer_.end() && fabs(it->first - data->timestamp_) > 0.003)
+        if (it != imu_buffer_.end())
+        {
+            if (fabs(it->first - data->timestamp_) > 0.003)
+            {
+                std::cerr << "[msf_initializer]: IMU and VIO are not synchronized!" << std::endl;
+                return false;
+            } else
+            {
+                // TODO: some imu data will be abandoned? whether we can use imu processor to use these data?
+                currentState->timestamp_ = it->first;
+                currentState->imuData_ = it->second;
+
+                currentState->pos_ = init_imu_q_vio_ * data->pos_ + init_imu_p_vio_;
+                currentState->vel_ = init_imu_q_vio_ * data->vel_;
+                currentState->q_ = init_imu_q_vio_ * data->q_;
+                currentState->ba_ = currentState->bw_ = Eigen::Vector3d::Zero();
+                currentState->g_ = Eigen::Vector3d(0., 0., -9.8);
+
+                // currentState->cov_.block<9, 9>(0, 0) = data->cov_;
+                currentState->cov_.block<6, 6>(0, 0) = Eigen::Matrix<double, 6, 6>::Identity();
+                currentState->cov_.block<3, 3>(6, 6) =
+                        Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
+                currentState->cov_.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity() * 0.1 * 0.1;
+                currentState->cov_.block<3, 3>(12, 12) = Eigen::Matrix3d::Identity() * 0.01 * 0.01;
+                currentState->cov_.block<3, 3>(15, 15) = Eigen::Matrix3d::Identity() * 0.01 * 0.01;
+
+                currentState->isWithMap_ = false;
+
+                return true;
+            }
+        } else
         {
             std::cerr << "[msf_initializer]: IMU and VIO are not synchronized!" << std::endl;
             return false;
         }
-
-        // TODO: some imu data will be abandoned? whether we can use imu processor to use these data?
-        currentState->timestamp_ = it->first;
-        currentState->imuData_ = it->second;
-
-        currentState->pos_ = init_imu_q_vio_ * data->pos_ + init_imu_p_vio_;
-        currentState->vel_ = init_imu_q_vio_ * data->vel_;
-        currentState->q_ = init_imu_q_vio_ * data->q_;
-        currentState->ba_ = currentState->bw_ = Eigen::Vector3d::Zero();
-
-        // currentState->cov_.block<9, 9>(0, 0) = data->cov_;
-        currentState->cov_.block<6, 6>(0, 0) = Eigen::Matrix<double, 6, 6>::Identity();
-        currentState->cov_.block<3, 3>(6, 6) = Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
-        currentState->cov_.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity() * 0.1 * 0.1;
-        currentState->cov_.block<3, 3>(12, 12) = Eigen::Matrix3d::Identity() * 0.01 * 0.01;
-
-        currentState->isWithMap_ = false;
-
-        return true;
     }
 }

@@ -25,14 +25,13 @@ namespace multiSensorFusion
     public:
         msf_imu_processor();
 
-        msf_imu_processor(const double &n_a, const double &n_w, const double &n_ba, const double &n_bw,
-                          Eigen::Vector3d g);
+        msf_imu_processor(const double &n_a, const double &n_w, const double &n_ba, const double &n_bw);
 
         ~msf_imu_processor() = default;
 
         void predict(const baseStatePtr &lastState, baseStatePtr &currentState) const;
 
-        void predictState(const baseStatePtr &lastState, baseStatePtr &currentState) const;
+        static void predictState(const baseStatePtr &lastState, baseStatePtr &currentState) ;
 
         void propagateCov(const baseStatePtr &lastState, baseStatePtr &currentState) const;
 
@@ -40,7 +39,6 @@ namespace multiSensorFusion
         // imu noise parameters
         // unit: n_a_-m/s^2/sqrt(hz) n_w_-rad/s/sqrt(hz) n_ba_-m/s^2*sqrt(hz) n_bw_-rad/s*sqrt(hz)
         double n_a_, n_w_, n_ba_, n_bw_;
-        Eigen::Vector3d g_;
     };
 }
 
