@@ -11,6 +11,8 @@
 
 #include "msf_vio_processor.h"
 
+#include <utility>
+
 namespace multiSensorFusion
 {
     msf_vio_processor::msf_vio_processor()
@@ -20,9 +22,9 @@ namespace multiSensorFusion
         update_transformation_ = false;
     }
 
-    msf_vio_processor::msf_vio_processor(const Eigen::Vector3d &imu_p_vio, const Eigen::Quaterniond &imu_q_vio,
+    msf_vio_processor::msf_vio_processor(Eigen::Vector3d imu_p_vio, const Eigen::Quaterniond &imu_q_vio,
                                          bool update_transformation = false)
-            : imu_p_vio_(imu_p_vio), imu_q_vio_(imu_q_vio), update_transformation_(update_transformation)
+            : imu_p_vio_(std::move(imu_p_vio)), imu_q_vio_(imu_q_vio), update_transformation_(update_transformation)
     {}
 
     void msf_vio_processor::updateState(baseStatePtr &currentState, const vioDataPtr &data)

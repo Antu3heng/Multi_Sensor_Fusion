@@ -27,7 +27,7 @@ namespace multiSensorFusion
     public:
         msf_initializer();
 
-        msf_initializer(Eigen::Vector3d init_imu_p_vio, Eigen::Quaterniond init_imu_q_vio);
+        msf_initializer(Eigen::Vector3d init_imu_p_vio, const Eigen::Quaterniond &init_imu_q_vio);
 
         ~msf_initializer() = default;
 
@@ -43,7 +43,7 @@ namespace multiSensorFusion
 
         std::map<double, imuDataPtr> imu_buffer_;
 
-        const int nImuBuffer_ = 200;
+        const int nImuBuffer_ = 100;
         // const double ImuAccStdLimit_ = 3.0;
     };
 }

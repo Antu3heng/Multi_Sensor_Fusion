@@ -20,6 +20,7 @@ namespace multiSensorFusion
         imuProcessor_ = std::make_shared<msf_imu_processor>();
         vioProcessor_ = std::make_shared<msf_vio_processor>();
         mapLocProcessor_ = std::make_shared<msf_mapLoc_processor>();
+        currentState_ = std::make_shared<baseState>();
     }
 
     bool msf_core::isInitialized() const
@@ -32,17 +33,18 @@ namespace multiSensorFusion
         if (!isInitialized())
         {
             initializer_->addIMU(data);
-            std::cerr << "[msf_core]: Waiting for initializing the filter..." << std::endl;
+            // std::cerr << "[msf_core]: Waiting for initializing the filter..." << std::endl;
         } else
         {
-            addSensorData(IMU, data->timestamp_);
+            // addMeasurement(IMU, data->timestamp_);
 
             currentState_ = std::make_shared<baseState>();
             currentState_->timestamp_ = data->timestamp_;
             currentState_->imuData_ = data;
 
-            imuProcessor_->predictState((--(state_buffer_.end()))->second, currentState_);
-            imuProcessor_->propagateCov((--(state_buffer_.end()))->second, currentState_);
+            // imuProcessor_->predictState((--(state_buffer_.end()))->second, currentState_);
+            // imuProcessor_->propagateCov((--(state_buffer_.end()))->second, currentState_);
+            imuProcessor_->predict((--(state_buffer_.end()))->second, currentState_);
 
             state_buffer_.insert(std::pair<double, baseStatePtr>(currentState_->timestamp_, currentState_));
         }
@@ -55,12 +57,12 @@ namespace multiSensorFusion
             if (initializer_->initializeUsingVIO(data, currentState_))
             {
                 initialized_ = true;
-                addSensorData(IMU, currentState_->timestamp_);
+                addMeasurement(IMU, currentState_->timestamp_);
                 state_buffer_.insert(std::pair<double, baseStatePtr>(currentState_->timestamp_, currentState_));
             }
         } else
         {
-            if (addSensorData(VIO, data->timestamp_))
+            if (addMeasurement(VIO, data->timestamp_))
             {
                 vioData_buffer_.insert(std::pair<double, vioDataPtr>(data->timestamp_, data));
                 applyMeasurement(data->timestamp_);
@@ -85,7 +87,7 @@ namespace multiSensorFusion
                     mapLocProcessor_->getInitTransformation(it->second, data);
             } else
             {
-                if (addSensorData(MapLoc, data->timestamp_))
+                if (addMeasurement(MapLoc, data->timestamp_))
                 {
                     mapLocData_buffer_.insert(std::pair<double, mapLocDataPtr>(data->timestamp_, data));
                     applyMeasurement(data->timestamp_);
@@ -96,12 +98,13 @@ namespace multiSensorFusion
 
     baseState msf_core::outputCurrentState()
     {
+        currentState_ = (--state_buffer_.end())->second;
         mapLocProcessor_->transformStateToMap(currentState_);
         return *currentState_;
     }
 
     // TODO: Figure out how to use the forward sensor data
-    bool msf_core::addSensorData(sensorType type, const double &timestamp)
+    bool msf_core::addMeasurement(sensorType type, const double &timestamp)
     {
         if (type != IMU)
         {
@@ -109,7 +112,7 @@ namespace multiSensorFusion
             if (it == state_buffer_.end())
             {
                 std::cerr << "[msf_core]: The new measurement is forward the states!" << std::endl;
-                // forwardSensorData_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
+                // futureMeasurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
                 return false;
             } else
             {
@@ -120,31 +123,38 @@ namespace multiSensorFusion
                     return false;
                 } else
                 {
-                    sensorData_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
+                    measurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
                     return true;
                 }
             }
         } else
         {
-            sensorData_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
+            measurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
             return true;
         }
     }
 
     void msf_core::applyMeasurement(const double &timestamp)
     {
-        for (auto itSensor = sensorData_buffer_.find(timestamp); itSensor != sensorData_buffer_.end(); ++itSensor)
+        auto itState = state_buffer_.lower_bound(timestamp - 0.003);
+        for (auto itSensor = measurement_buffer_.find(timestamp); itSensor != measurement_buffer_.end(); ++itSensor)
         {
-            auto itState = state_buffer_.lower_bound(itSensor->first - 0.003);
+            while (itState != state_buffer_.lower_bound(itSensor->first - 0.003))
+            {
+                imuProcessor_->predict(itState->second, (++itState)->second);
+            }
             switch (itSensor->second)
             {
-                case IMU:
-                {
-                    auto itStateNow = itState;
-                    imuProcessor_->predictState((--itState)->second, itStateNow->second);
-                    imuProcessor_->propagateCov((--itState)->second, itStateNow->second);
-                    break;
-                }
+                // case IMU:
+                // {
+                //     if (itState != state_buffer_.begin())
+                //     {
+                //         auto itStateNow = itState;
+                //         imuProcessor_->predictState((--itState)->second, itStateNow->second);
+                //         imuProcessor_->propagateCov(itState->second, itStateNow->second);
+                //     }
+                //     break;
+                // }
                 case VIO:
                 {
                     vioProcessor_->updateState(itState->second, vioData_buffer_.find(itSensor->first)->second);
@@ -153,6 +163,7 @@ namespace multiSensorFusion
                 case MapLoc:
                 {
                     mapLocProcessor_->updateState(itState->second, mapLocData_buffer_.find(itSensor->first)->second);
+                    std::cout << "MapLoc update!!!" << std::endl;
                     break;
                 }
                 default:

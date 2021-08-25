@@ -1,7 +1,10 @@
 <launch>
 
   <!-- Launch vio_t265_fusion node -->
-  <node pkg="vio_localization_fusion" type="t265_localization_fusion_node" name="t265_localization_fusion"
+  <!-- <node pkg="vio_localization_fusion" type="t265_localization_fusion_node" name="t265_localization_fusion"
+        output="screen"/> -->
+
+  <node pkg="vio_localization_fusion" type="t265_fusion_new_node" name="t265_localization_fusion"
         output="screen"/>
 
   <!-- Launch map-based localization node

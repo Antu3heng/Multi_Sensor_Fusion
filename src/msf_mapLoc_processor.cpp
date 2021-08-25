@@ -11,6 +11,8 @@
 
 #include "msf_mapLoc_processor.h"
 
+#include <utility>
+
 namespace multiSensorFusion
 {
     msf_mapLoc_processor::msf_mapLoc_processor()
@@ -22,10 +24,10 @@ namespace multiSensorFusion
         n_q_ = 5.;
     }
 
-    msf_mapLoc_processor::msf_mapLoc_processor(const Eigen::Vector3d &imu_p_map, const Eigen::Quaterniond &imu_q_map,
+    msf_mapLoc_processor::msf_mapLoc_processor(Eigen::Vector3d imu_p_map, const Eigen::Quaterniond &imu_q_map,
                                                double n_pos,
                                                double n_q, bool update_transformation = false)
-            : imu_p_map_(imu_p_map), imu_q_map_(imu_q_map), update_transformation_(update_transformation),
+            : imu_p_map_(std::move(imu_p_map)), imu_q_map_(imu_q_map), update_transformation_(update_transformation),
               n_pos_(n_pos), n_q_(n_q)
     {
         if (update_transformation_)

@@ -11,6 +11,8 @@
 
 #include "msf_initializer.h"
 
+#include <utility>
+
 namespace multiSensorFusion
 {
     msf_initializer::msf_initializer()
@@ -19,8 +21,8 @@ namespace multiSensorFusion
         init_imu_q_vio_ = Eigen::Quaterniond::Identity();
     }
 
-    msf_initializer::msf_initializer(Eigen::Vector3d init_imu_p_vio, Eigen::Quaterniond init_imu_q_vio)
-            : init_imu_p_vio_(init_imu_p_vio), init_imu_q_vio_(init_imu_q_vio)
+    msf_initializer::msf_initializer(Eigen::Vector3d init_imu_p_vio, const Eigen::Quaterniond &init_imu_q_vio)
+            : init_imu_p_vio_(std::move(init_imu_p_vio)), init_imu_q_vio_(init_imu_q_vio)
     {}
 
     void msf_initializer::addIMU(const imuDataPtr &data)
@@ -39,7 +41,7 @@ namespace multiSensorFusion
         }
 
         auto it = imu_buffer_.lower_bound(data->timestamp_ - 0.003);
-        if (fabs(it->first - data->timestamp_) > 0.003)
+        if (it != imu_buffer_.end() && fabs(it->first - data->timestamp_) > 0.003)
         {
             std::cerr << "[msf_initializer]: IMU and VIO are not synchronized!" << std::endl;
             return false;
@@ -54,7 +56,7 @@ namespace multiSensorFusion
         currentState->q_ = init_imu_q_vio_ * data->q_;
         currentState->ba_ = currentState->bw_ = Eigen::Vector3d::Zero();
 
-        currentState->cov_.block<9, 9>(0, 0) = data->cov_;
+        // currentState->cov_.block<9, 9>(0, 0) = data->cov_;
         currentState->cov_.block<6, 6>(0, 0) = Eigen::Matrix<double, 6, 6>::Identity();
         currentState->cov_.block<3, 3>(6, 6) = Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
         currentState->cov_.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity() * 0.1 * 0.1;

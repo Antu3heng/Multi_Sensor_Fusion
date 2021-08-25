@@ -45,7 +45,7 @@ namespace multiSensorFusion
         baseState outputCurrentState();
 
     private:
-        bool addSensorData(sensorType type, const double &timestamp);
+        bool addMeasurement(sensorType type, const double &timestamp);
 
         void applyMeasurement(const double &timestamp);
 
@@ -62,7 +62,8 @@ namespace multiSensorFusion
         std::map<double, baseStatePtr> state_buffer_;
 
         std::map<double, sensorType> sensorData_buffer_;
-        // std::map<double, sensorType> forwardSensorData_buffer_;
+        std::map<double, sensorType> measurement_buffer_;
+        // std::map<double, sensorType> futureMeasurement_buffer_;
         std::map<double, vioDataPtr> vioData_buffer_;
         std::map<double, mapLocDataPtr> mapLocData_buffer_;
     };

@@ -25,7 +25,7 @@ namespace multiSensorFusion
     public:
         msf_mapLoc_processor();
 
-        msf_mapLoc_processor(const Eigen::Vector3d &imu_p_map, const Eigen::Quaterniond &imu_q_map, double n_pos,
+        msf_mapLoc_processor(Eigen::Vector3d imu_p_map, const Eigen::Quaterniond &imu_q_map, double n_pos,
                              double n_q, bool update_transformation);
 
         ~msf_mapLoc_processor() = default;

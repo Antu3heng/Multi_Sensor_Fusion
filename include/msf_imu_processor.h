@@ -30,6 +30,8 @@ namespace multiSensorFusion
 
         ~msf_imu_processor() = default;
 
+        void predict(const baseStatePtr &lastState, baseStatePtr &currentState) const;
+
         void predictState(const baseStatePtr &lastState, baseStatePtr &currentState) const;
 
         void propagateCov(const baseStatePtr &lastState, baseStatePtr &currentState) const;

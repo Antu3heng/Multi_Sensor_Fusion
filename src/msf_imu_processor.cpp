@@ -11,17 +11,25 @@
 
 #include "msf_imu_processor.h"
 
+#include <utility>
+
 namespace multiSensorFusion
 {
     msf_imu_processor::msf_imu_processor()
             : n_a_(1.8032560209070164e-02), n_w_(2.1483047214801627e-03), n_ba_(4.9098209065407837e-04),
-              n_bw_(1.5036495212638137e-05), g_(std::move(Eigen::Vector3d(0.0, 0.0, -9.8)))
+              n_bw_(1.5036495212638137e-05), g_(Eigen::Vector3d(0.0, 0.0, -9.8))
     {}
 
     msf_imu_processor::msf_imu_processor(const double &n_a, const double &n_w, const double &n_ba,
                                          const double &n_bw, Eigen::Vector3d g = Eigen::Vector3d(0., 0., -9.8))
-            : n_a_(n_a), n_w_(n_w), n_ba_(n_ba), n_bw_(n_bw), g_(g)
+            : n_a_(n_a), n_w_(n_w), n_ba_(n_ba), n_bw_(n_bw), g_(std::move(g))
     {}
+
+    void msf_imu_processor::predict(const baseStatePtr &lastState, baseStatePtr &currentState) const
+    {
+        predictState(lastState, currentState);
+        propagateCov(lastState, currentState);
+    }
 
     void msf_imu_processor::predictState(const baseStatePtr &lastState, baseStatePtr &currentState) const
     {
