@@ -47,6 +47,7 @@ namespace multiSensorFusion
         Eigen::Isometry3d imu_T_map = imu_T_i * map_T_i.inverse();
         imu_p_map_ = imu_T_map.translation();
         imu_q_map_ = imu_T_map.linear();
+        imu_q_map_.normalized();
         n_pos_ = 0.2;
         n_q_ = 5.;
         update_transformation_ = true;
@@ -56,7 +57,7 @@ namespace multiSensorFusion
     {
         if (update_transformation_)
         {
-            //  residuals
+            // residuals
             Eigen::VectorXd dz_transform = Eigen::VectorXd::Zero(6);
             dz_transform.segment(0, 3) = currentState->pos_ - (imu_q_map_ * data->pos_ + imu_p_map_);
             Eigen::Quaterniond dq_transform = (imu_q_map_ * data->q_).conjugate() * currentState->q_;
@@ -64,16 +65,18 @@ namespace multiSensorFusion
             dz_transform.segment(3, 3) = dtheta_transform.axis() * dtheta_transform.angle();
 
             // Matrix H
+            // TODO: Figure out the pos related to rot part in H
             Eigen::MatrixXd H_transform = Eigen::MatrixXd::Zero(6, 6);
             H_transform.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
-            H_transform.block<3, 3>(3, 3) = -data->q_.toRotationMatrix().transpose();
+            H_transform.block<3, 3>(0, 3) = -imu_q_map_.toRotationMatrix() * skew_symmetric(data->pos_);
+            H_transform.block<3, 3>(3, 3) = data->q_.toRotationMatrix().transpose();
 
             // Matrix R
             Eigen::MatrixXd R_transform = Eigen::MatrixXd::Zero(6, 6);
-            R_transform.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.2 * 0.2;
-            // R_transform.block<3, 3>(0, 0) = currentState.cov_.block<3, 3>(0, 0);
-            R_transform.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
-            // R_transform.block<3, 3>(3, 3) = currentState.cov_.block<3, 3>(6, 6);
+            // R_transform.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.2 * 0.2;
+            R_transform.block<3, 3>(0, 0) = currentState->cov_.block<3, 3>(0, 0);
+            // R_transform.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
+            R_transform.block<3, 3>(3, 3) = currentState->cov_.block<3, 3>(6, 6);
 
             // update the transformation from VIO to IMU and the covariance
             Eigen::MatrixXd S_transform = H_transform * cov_ * H_transform.transpose() + R_transform;
@@ -86,6 +89,7 @@ namespace multiSensorFusion
             imu_p_map_ += delta_states_transform.segment(0, 3);
             Eigen::Quaterniond delta_q_transform = getQuaternionFromAngle(delta_states_transform.segment(3, 3));
             imu_q_map_ *= delta_q_transform;
+            imu_q_map_.normalized();
 
             // ESKF reset
             Eigen::MatrixXd G_transform = Eigen::MatrixXd::Identity(6, 6);
@@ -125,6 +129,7 @@ namespace multiSensorFusion
         currentState->vel_ += delta_states.segment(3, 3);
         Eigen::Quaterniond delta_q = getQuaternionFromAngle(delta_states.segment(6, 3));
         currentState->q_ *= delta_q;
+        currentState->q_.normalized();
         currentState->ba_ += delta_states.segment(9, 3);
         currentState->bw_ += delta_states.segment(12, 3);
         currentState->g_ += delta_states.segment(15, 3);

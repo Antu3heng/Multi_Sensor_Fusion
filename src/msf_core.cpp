@@ -70,15 +70,21 @@ namespace multiSensorFusion
             if (!isWithMap_)
             {
                 auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
-                if (it != state_buffer_.end() && fabs(it->first - data->timestamp_) > 0.003)
+                if (it != state_buffer_.end())
+                {
+                    if (fabs(it->first - data->timestamp_) > 0.003)
+                        std::cerr
+                                << "[msf_core]: Map pose and IMU's timestamps are not synchronized, which can't be used to get the map!"
+                                << std::endl;
+                    else
+                    {
+                        mapLocProcessor_->getInitTransformation(it->second, data);
+                        isWithMap_ = true;
+                    }
+                } else
                     std::cerr
                             << "[msf_core]: Map pose and IMU's timestamps are not synchronized, which can't be used to get the map!"
                             << std::endl;
-                else
-                {
-                    mapLocProcessor_->getInitTransformation(it->second, data);
-                    isWithMap_ = true;
-                }
             } else
             {
                 if (addMeasurement(MapLoc, data->timestamp_))

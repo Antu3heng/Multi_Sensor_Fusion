@@ -38,6 +38,7 @@ namespace multiSensorFusion
         // attitude
         Eigen::Quaterniond dq = getQuaternionFromAngle(theta);
         currentState->q_ = lastState->q_ * dq;
+        currentState->q_.normalized();
         // velocity
         Eigen::Vector3d deltaVel = (currentState->q_ * acc + lastState->g_) * dt;
         currentState->vel_ = lastState->vel_ + deltaVel;
@@ -56,7 +57,6 @@ namespace multiSensorFusion
         double dt = currentState->timestamp_ - lastState->timestamp_;
         Eigen::Vector3d acc = 0.5 * (lastState->imuData_->acc_ + currentState->imuData_->acc_) - lastState->ba_;
         Eigen::Vector3d gyro = 0.5 * (lastState->imuData_->gyro_ + currentState->imuData_->gyro_) - lastState->bw_;
-        Eigen::Vector3d theta = gyro * dt;
         Eigen::Matrix3d R = currentState->q_.toRotationMatrix();
 
         // propagate the covariance

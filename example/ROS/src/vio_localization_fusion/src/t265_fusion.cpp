@@ -75,7 +75,7 @@ void mapLocCallback(const geometry_msgs::PoseStampedConstPtr &msg)
     Eigen::Isometry3d Tmc = Eigen::Isometry3d::Identity();
     Tmc.rotate(q);
     Tmc.pretranslate(pos);
-    Eigen::Isometry3d Tci;
+    Eigen::Isometry3d Tci = Eigen::Isometry3d::Identity();
     Tci.linear() << 0, -1, 0,
                     0, 0, -1,
                     1, 0, 0;

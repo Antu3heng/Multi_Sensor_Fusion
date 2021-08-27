@@ -69,6 +69,7 @@ namespace multiSensorFusion
         currentState->vel_ += delta_states.segment(3, 3);
         Eigen::Quaterniond delta_q = getQuaternionFromAngle(delta_states.segment(6, 3));
         currentState->q_ *= delta_q;
+        currentState->q_.normalized();
         currentState->ba_ += delta_states.segment(9, 3);
         currentState->bw_ += delta_states.segment(12, 3);
         currentState->g_ += delta_states.segment(15, 3);

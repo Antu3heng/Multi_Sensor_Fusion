@@ -56,6 +56,7 @@ namespace multiSensorFusion
                 currentState->pos_ = init_imu_q_vio_ * data->pos_ + init_imu_p_vio_;
                 currentState->vel_ = init_imu_q_vio_ * data->vel_;
                 currentState->q_ = init_imu_q_vio_ * data->q_;
+                currentState->q_.normalized();
                 currentState->ba_ = currentState->bw_ = Eigen::Vector3d::Zero();
                 currentState->g_ = Eigen::Vector3d(0., 0., -9.8);
 

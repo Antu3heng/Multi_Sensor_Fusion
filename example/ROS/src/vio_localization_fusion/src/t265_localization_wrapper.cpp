@@ -148,7 +148,7 @@ void t265_localization_wrapper::mapLocMsgProcess(const geometry_msgs::PoseStampe
     Eigen::Isometry3d Tmc = Eigen::Isometry3d::Identity();
     Tmc.rotate(q);
     Tmc.pretranslate(pos);
-    Eigen::Isometry3d Tci;
+    Eigen::Isometry3d Tci = Eigen::Isometry3d::Identity();
     Tci.linear() << 0, -1, 0,
                     0, 0, -1,
                     1, 0, 0;
