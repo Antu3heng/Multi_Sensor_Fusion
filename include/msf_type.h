@@ -27,17 +27,25 @@ namespace multiSensorFusion
         MapLoc
     };
 
-    struct imuData
+    struct baseData
     {
+    public:
+        virtual ~baseData() = default;;
+
         double timestamp_;
+        sensorType type_;
+    };
+    using baseDataPtr = std::shared_ptr<baseData>;
+
+    struct imuData : public baseData
+    {
         Eigen::Vector3d acc_;
         Eigen::Vector3d gyro_;
     };
     using imuDataPtr = std::shared_ptr<imuData>;
 
-    struct vioData
+    struct vioData : public baseData
     {
-        double timestamp_;
         Eigen::Vector3d pos_;
         Eigen::Vector3d vel_;
         Eigen::Quaterniond q_;
@@ -45,17 +53,15 @@ namespace multiSensorFusion
     };
     using vioDataPtr = std::shared_ptr<vioData>;
 
-    struct mapLocData
+    struct mapLocData : public baseData
     {
-        double timestamp_;
         Eigen::Vector3d pos_;
         Eigen::Quaterniond q_;
     };
     using mapLocDataPtr = std::shared_ptr<mapLocData>;
 
-    struct gpsData
+    struct gpsData : public baseData
     {
-        double timestamp_;
         Eigen::Vector3d lla_;
         Eigen::Matrix3d cov_;
     };

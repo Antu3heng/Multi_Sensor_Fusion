@@ -32,6 +32,7 @@ void imuCallback(const sensor_msgs::ImuConstPtr &msg)
     auto data = std::make_shared<multiSensorFusion::imuData>();
 
     data->timestamp_ = msg->header.stamp.toSec();
+    data->type_ = multiSensorFusion::IMU;
     data->acc_ << msg->linear_acceleration.z, -msg->linear_acceleration.x, -msg->linear_acceleration.y;
     data->gyro_ << msg->angular_velocity.z, -msg->angular_velocity.x, -msg->angular_velocity.y;
     
@@ -43,6 +44,7 @@ void t265Callback(const nav_msgs::OdometryConstPtr &msg)
     auto data = std::make_shared<multiSensorFusion::vioData>();
 
     data->timestamp_ = msg->header.stamp.toSec();
+    data->type_ = multiSensorFusion::VIO;
     data->pos_ << msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z;
     data->vel_ << msg->twist.twist.linear.x, msg->twist.twist.linear.y, msg->twist.twist.linear.z;
     data->q_ = Quaterniond(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
@@ -73,6 +75,7 @@ void mapLocCallback(const geometry_msgs::PoseStampedConstPtr &msg)
     auto data = std::make_shared<multiSensorFusion::mapLocData>();
 
     data->timestamp_ = msg->header.stamp.toSec();
+    data->type_ = multiSensorFusion::MapLoc;
     Vector3d pos;
     pos << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
     Quaterniond q(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);

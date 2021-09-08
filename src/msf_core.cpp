@@ -56,12 +56,8 @@ namespace multiSensorFusion
             }
         } else
         {
-            if (addMeasurement(VIO, data->timestamp_))
-            {
-                vioData_buffer_.insert(std::pair<double, vioDataPtr>(data->timestamp_, data));
-                if (!isFutureMeasurement_)
-                    applyMeasurement(data->timestamp_);
-            }
+            if (addMeasurement(data))
+                applyMeasurement(data->timestamp_);
         }
     }
 
@@ -92,12 +88,8 @@ namespace multiSensorFusion
 #endif
             } else
             {
-                if (addMeasurement(MapLoc, data->timestamp_))
-                {
-                    mapLocData_buffer_.insert(std::pair<double, mapLocDataPtr>(data->timestamp_, data));
-                    if (!isFutureMeasurement_)
-                        applyMeasurement(data->timestamp_);
-                }
+                if (addMeasurement(data))
+                    applyMeasurement(data->timestamp_);
             }
         }
     }
@@ -110,58 +102,64 @@ namespace multiSensorFusion
         return *currentState_;
     }
 
-    // TODO: Figure out how to use the forward sensor data
-    bool msf_core::addMeasurement(sensorType type, const double &timestamp)
+
+
+    bool msf_core::addMeasurement(const baseDataPtr &data)
     {
-        auto it = state_buffer_.lower_bound(timestamp - 0.003);
+        auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
         if (it == state_buffer_.end())
         {
 #ifdef DEBUG
             std::cerr << "[msf_core]: The new measurement is forward the states!" << std::endl;
 #endif
-            futureMeasurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
-            isFutureMeasurement_ = true;
-            return true;
+            futureMeas_buffer_.insert(std::pair<double, baseDataPtr>(data->timestamp_, data));
+            return false;
         } else
         {
-            if (fabs(it->first - timestamp) <= 0.003)
+            if (fabs(it->first - data->timestamp_) <= 0.003)
             {
-                measurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
-                isFutureMeasurement_ = false;
+                meas_buffer_.insert(std::pair<double, baseDataPtr>(data->timestamp_, data));
                 return true;
-            }
-#ifdef DEBUG
-            else
+            } else
             {
+#ifdef DEBUG
                 std::cerr << "[msf_core]: The new measurement and states' timestamps are not synchronized!"
                           << std::endl;
+#endif
                 return false;
             }
-#endif
         }
-        return false;
     }
 
     void msf_core::applyMeasurement(const double &timestamp)
     {
         auto itState = state_buffer_.lower_bound(timestamp - 0.003);
-        for (auto itSensor = measurement_buffer_.find(timestamp); itSensor != measurement_buffer_.end(); ++itSensor)
+        for (auto itSensor = meas_buffer_.find(timestamp); itSensor != meas_buffer_.end(); ++itSensor)
         {
             while (itState != state_buffer_.lower_bound(itSensor->first - 0.003))
             {
                 auto itLastState = itState;
                 imuProcessor_->predict(itLastState->second, (++itState)->second);
             }
-            switch (itSensor->second)
+            switch (itSensor->second->type_)
             {
                 case VIO:
                 {
-                    vioProcessor_->updateState(itState->second, vioData_buffer_.find(itSensor->first)->second);
+#ifdef DEBUG
+                    std::cerr << "[msf_core]: VIO update!!!"
+                          << std::endl;
+#endif
+                    vioProcessor_->updateState(itState->second, std::dynamic_pointer_cast<vioData>(itSensor->second));
                     break;
                 }
                 case MapLoc:
                 {
-                    mapLocProcessor_->updateState(itState->second, mapLocData_buffer_.find(itSensor->first)->second);
+#ifdef DEBUG
+                    std::cerr << "[msf_core]: MapLoc update!!!"
+                          << std::endl;
+#endif
+                    mapLocProcessor_->updateState(itState->second,
+                                                  std::dynamic_pointer_cast<mapLocData>(itSensor->second));
                     break;
                 }
                 default:
@@ -177,7 +175,7 @@ namespace multiSensorFusion
 
     void msf_core::screenFutureMeasurement()
     {
-        for (auto it = futureMeasurement_buffer_.begin(); it != futureMeasurement_buffer_.end(); )
+        for (auto it = futureMeas_buffer_.begin(); it != futureMeas_buffer_.end();)
         {
             auto itState = state_buffer_.lower_bound(it->first - 0.003);
             if (itState == state_buffer_.end())
@@ -185,26 +183,8 @@ namespace multiSensorFusion
             else
             {
                 if (fabs(it->first - itState->first) <= 0.003)
-                    measurement_buffer_.insert(*it);
-                else
-                {
-                    switch (it->second)
-                    {
-                        case VIO:
-                        {
-                            vioData_buffer_.erase(it->first);
-                            break;
-                        }
-                        case MapLoc:
-                        {
-                            mapLocData_buffer_.erase(it->first);
-                            break;
-                        }
-                        default:
-                            break;
-                    }
-                }
-                it = futureMeasurement_buffer_.erase(it);
+                    meas_buffer_.insert(*it);
+                it = futureMeas_buffer_.erase(it);
             }
         }
     }
