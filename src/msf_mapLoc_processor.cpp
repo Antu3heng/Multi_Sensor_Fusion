@@ -39,11 +39,8 @@ namespace multiSensorFusion
 
     void msf_mapLoc_processor::getInitTransformation(const baseStatePtr &state, const mapLocDataPtr &data)
     {
-        Eigen::Isometry3d map_T_i = Eigen::Isometry3d::Identity(), imu_T_i = Eigen::Isometry3d::Identity();
-        map_T_i.rotate(data->q_);
-        map_T_i.pretranslate(data->pos_);
-        imu_T_i.rotate(state->q_);
-        imu_T_i.pretranslate(state->pos_);
+        Eigen::Isometry3d map_T_i = getTFromRotAndTranslation(data->pos_, data->q_);
+        Eigen::Isometry3d imu_T_i = getTFromRotAndTranslation(state->pos_, state->q_);
         Eigen::Isometry3d imu_T_map = imu_T_i * map_T_i.inverse();
         imu_p_map_ = imu_T_map.translation();
         imu_q_map_ = imu_T_map.linear();

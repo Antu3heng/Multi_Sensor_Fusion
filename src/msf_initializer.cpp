@@ -36,7 +36,9 @@ namespace multiSensorFusion
     {
         if (imu_buffer_.size() < nImuBuffer_)
         {
+#ifdef DEBUG
             std::cerr << "[msf_initializer]: No enough IMU data!" << std::endl;
+#endif
             return false;
         }
 
@@ -45,7 +47,9 @@ namespace multiSensorFusion
         {
             if (fabs(it->first - data->timestamp_) > 0.003)
             {
+#ifdef DEBUG
                 std::cerr << "[msf_initializer]: IMU and VIO are not synchronized!" << std::endl;
+#endif
                 return false;
             } else
             {

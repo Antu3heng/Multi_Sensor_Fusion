@@ -29,6 +29,7 @@ namespace multiSensorFusion
 
     void msf_vio_processor::updateState(baseStatePtr &currentState, const vioDataPtr &data)
     {
+        // TODO: update imu and vio/SLAM's coordination transformation
         if (update_transformation_)
         {
 

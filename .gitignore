@@ -4,7 +4,7 @@ cmake-build-release
 test_result
 .idea
 example/ROS/.catkin_tools
-example/ROS/devel
-example/ROS/build
-example/ROS/logs
+devel
+build
+logs
 lib

@@ -40,6 +40,7 @@ namespace multiSensorFusion
             currentState_->imuData_ = data;
             imuProcessor_->predict((--(state_buffer_.end()))->second, currentState_);
             state_buffer_.insert(std::pair<double, baseStatePtr>(currentState_->timestamp_, currentState_));
+            screenFutureMeasurement();
         }
     }
 
@@ -58,7 +59,8 @@ namespace multiSensorFusion
             if (addMeasurement(VIO, data->timestamp_))
             {
                 vioData_buffer_.insert(std::pair<double, vioDataPtr>(data->timestamp_, data));
-                applyMeasurement(data->timestamp_);
+                if (!isFutureMeasurement_)
+                    applyMeasurement(data->timestamp_);
             }
         }
     }
@@ -72,25 +74,29 @@ namespace multiSensorFusion
                 auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
                 if (it != state_buffer_.end())
                 {
-                    if (fabs(it->first - data->timestamp_) > 0.003)
-                        std::cerr
-                                << "[msf_core]: Map pose and IMU's timestamps are not synchronized, which can't be used to get the map!"
-                                << std::endl;
-                    else
+                    if (fabs(it->first - data->timestamp_) <= 0.003)
                     {
                         mapLocProcessor_->getInitTransformation(it->second, data);
                         isWithMap_ = true;
                     }
-                } else
-                    std::cerr
-                            << "[msf_core]: Map pose and IMU's timestamps are not synchronized, which can't be used to get the map!"
-                            << std::endl;
+#ifdef DEBUG
+                    else
+                        std::cerr
+                                << "[msf_core]: Map pose and IMU's timestamps are not synchronized, which can't be used to get the map!"
+                                << std::endl;
+#endif
+                }
+#ifdef DEBUG
+                else
+                    std::cerr << "[msf_core]: Map pose is forward the IMU, which can't be used to get the map!" << std::endl;
+#endif
             } else
             {
                 if (addMeasurement(MapLoc, data->timestamp_))
                 {
                     mapLocData_buffer_.insert(std::pair<double, mapLocDataPtr>(data->timestamp_, data));
-                    applyMeasurement(data->timestamp_);
+                    if (!isFutureMeasurement_)
+                        applyMeasurement(data->timestamp_);
                 }
             }
         }
@@ -107,32 +113,33 @@ namespace multiSensorFusion
     // TODO: Figure out how to use the forward sensor data
     bool msf_core::addMeasurement(sensorType type, const double &timestamp)
     {
-        if (type != IMU)
+        auto it = state_buffer_.lower_bound(timestamp - 0.003);
+        if (it == state_buffer_.end())
         {
-            auto it = state_buffer_.lower_bound(timestamp - 0.003);
-            if (it == state_buffer_.end())
-            {
-                // std::cerr << "[msf_core]: The new measurement is forward the states!" << std::endl;
-                // futureMeasurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
-                return false;
-            } else
-            {
-                if (fabs(it->first - timestamp) > 0.003)
-                {
-                    // std::cerr << "[msf_core]: The new measurement and states' timestamps are not synchronized!"
-                    //           << std::endl;
-                    return false;
-                } else
-                {
-                    measurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
-                    return true;
-                }
-            }
+#ifdef DEBUG
+            std::cerr << "[msf_core]: The new measurement is forward the states!" << std::endl;
+#endif
+            futureMeasurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
+            isFutureMeasurement_ = true;
+            return true;
         } else
         {
-            measurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
-            return true;
+            if (fabs(it->first - timestamp) <= 0.003)
+            {
+                measurement_buffer_.insert(std::pair<double, sensorType>(timestamp, type));
+                isFutureMeasurement_ = false;
+                return true;
+            }
+#ifdef DEBUG
+            else
+            {
+                std::cerr << "[msf_core]: The new measurement and states' timestamps are not synchronized!"
+                          << std::endl;
+                return false;
+            }
+#endif
         }
+        return false;
     }
 
     void msf_core::applyMeasurement(const double &timestamp)
@@ -165,6 +172,40 @@ namespace multiSensorFusion
         {
             auto itLastState = itState;
             imuProcessor_->predict(itLastState->second, (++itState)->second);
+        }
+    }
+
+    void msf_core::screenFutureMeasurement()
+    {
+        for (auto it = futureMeasurement_buffer_.begin(); it != futureMeasurement_buffer_.end(); )
+        {
+            auto itState = state_buffer_.lower_bound(it->first - 0.003);
+            if (itState == state_buffer_.end())
+                break;
+            else
+            {
+                if (fabs(it->first - itState->first) <= 0.003)
+                    measurement_buffer_.insert(*it);
+                else
+                {
+                    switch (it->second)
+                    {
+                        case VIO:
+                        {
+                            vioData_buffer_.erase(it->first);
+                            break;
+                        }
+                        case MapLoc:
+                        {
+                            mapLocData_buffer_.erase(it->first);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+                it = futureMeasurement_buffer_.erase(it);
+            }
         }
     }
 }

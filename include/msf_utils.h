@@ -40,7 +40,7 @@ namespace multiSensorFusion
     static Eigen::Isometry3d
     getTFromRotAndTranslation(const Eigen::Vector3d &translation, const Eigen::Quaterniond &rotation)
     {
-        Eigen::Isometry3d T;
+        Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
         T.linear() = rotation.toRotationMatrix();
         T.pretranslate(translation);
         return T;

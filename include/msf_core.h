@@ -49,6 +49,8 @@ namespace multiSensorFusion
 
         void applyMeasurement(const double &timestamp);
 
+        void screenFutureMeasurement();
+
         std::shared_ptr<msf_initializer> initializer_;
         std::shared_ptr<msf_imu_processor> imuProcessor_;
         std::shared_ptr<msf_vio_processor> vioProcessor_;
@@ -56,13 +58,14 @@ namespace multiSensorFusion
 
         bool initialized_;
         bool isWithMap_;
+        bool isFutureMeasurement_;
 
         baseStatePtr currentState_;
 
         std::map<double, baseStatePtr> state_buffer_;
 
         std::map<double, sensorType> measurement_buffer_;
-        // std::map<double, sensorType> futureMeasurement_buffer_;
+        std::map<double, sensorType> futureMeasurement_buffer_;
         std::map<double, vioDataPtr> vioData_buffer_;
         std::map<double, mapLocDataPtr> mapLocData_buffer_;
     };
