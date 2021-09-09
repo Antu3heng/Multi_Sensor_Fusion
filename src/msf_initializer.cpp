@@ -32,11 +32,11 @@ namespace multiSensorFusion
             imu_buffer_.erase(imu_buffer_.begin());
     }
 
-    bool msf_initializer::initializeUsingVIO(const vioDataPtr &data, baseStatePtr &currentState)
+    bool msf_initializer::initializeUsingVIO(const odomDataPtr &data, baseStatePtr &currentState)
     {
         if (imu_buffer_.size() < nImuBuffer_)
         {
-#ifdef DEBUG
+#ifdef TEST_DEBUG
             std::cerr << "[msf_initializer]: No enough IMU data!" << std::endl;
 #endif
             return false;
@@ -47,7 +47,7 @@ namespace multiSensorFusion
         {
             if (fabs(it->first - data->timestamp_) > 0.003)
             {
-#ifdef DEBUG
+#ifdef TEST_DEBUG
                 std::cerr << "[msf_initializer]: IMU and VIO are not synchronized!" << std::endl;
 #endif
                 return false;

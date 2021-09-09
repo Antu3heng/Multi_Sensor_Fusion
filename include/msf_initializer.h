@@ -33,7 +33,7 @@ namespace multiSensorFusion
 
         void addIMU(const imuDataPtr &data);
 
-        bool initializeUsingVIO(const vioDataPtr &data, baseStatePtr &currentState);
+        bool initializeUsingVIO(const odomDataPtr &data, baseStatePtr &currentState);
 
         // bool initializeUsingGPS(const gpsData &data, baseState &currentState);
 

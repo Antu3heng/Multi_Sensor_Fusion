@@ -37,7 +37,7 @@ namespace multiSensorFusion
         }
     }
 
-    void msf_mapLoc_processor::getInitTransformation(const baseStatePtr &state, const mapLocDataPtr &data)
+    void msf_mapLoc_processor::getInitTransformation(const baseStatePtr &state, const poseDataPtr &data)
     {
         Eigen::Isometry3d map_T_i = getTFromRotAndTranslation(data->pos_, data->q_);
         Eigen::Isometry3d imu_T_i = getTFromRotAndTranslation(state->pos_, state->q_);
@@ -50,7 +50,7 @@ namespace multiSensorFusion
         update_transformation_ = true;
     }
 
-    void msf_mapLoc_processor::updateState(baseStatePtr &currentState, const mapLocDataPtr &data)
+    void msf_mapLoc_processor::updateState(baseStatePtr &currentState, const poseDataPtr &data)
     {
         if (update_transformation_)
         {
@@ -62,7 +62,6 @@ namespace multiSensorFusion
             dz_transform.segment(3, 3) = dtheta_transform.axis() * dtheta_transform.angle();
 
             // Matrix H
-            // TODO: Figure out the pos related to rot part in H
             Eigen::MatrixXd H_transform = Eigen::MatrixXd::Zero(6, 6);
             H_transform.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
             H_transform.block<3, 3>(0, 3) = -imu_q_map_.toRotationMatrix() * skew_symmetric(data->pos_);

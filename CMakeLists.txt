@@ -2,14 +2,18 @@ cmake_minimum_required(VERSION 2.8.0)
 project(Multi_Sensor_Fusion)
 
 if (NOT CMAKE_BUILD_TYPE)
-    SET(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Release)
 endif ()
 
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDEBUG -Wall  -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall  -O3")
+
+option(TEST_DEBUG "option for debug output" OFF)
+if (TEST_DEBUG)
+    add_definitions(-DTEST_DEBUG)
+endif ()
 
 # Check C++11 or C++0x support
 include(CheckCXXCompilerFlag)

@@ -30,9 +30,9 @@ namespace multiSensorFusion
 
         ~msf_mapLoc_processor() = default;
 
-        void getInitTransformation(const baseStatePtr &state, const mapLocDataPtr &data);
+        void getInitTransformation(const baseStatePtr &state, const poseDataPtr &data);
 
-        void updateState(baseStatePtr &currentState, const mapLocDataPtr &data);
+        void updateState(baseStatePtr &currentState, const poseDataPtr &data);
 
         void transformStateToMap(baseStatePtr &state);
 

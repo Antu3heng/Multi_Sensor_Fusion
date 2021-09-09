@@ -27,7 +27,7 @@ namespace multiSensorFusion
             : imu_p_vio_(std::move(imu_p_vio)), imu_q_vio_(imu_q_vio), update_transformation_(update_transformation)
     {}
 
-    void msf_vio_processor::updateState(baseStatePtr &currentState, const vioDataPtr &data)
+    void msf_vio_processor::updateState(baseStatePtr &currentState, const odomDataPtr &data)
     {
         // TODO: update imu and vio/SLAM's coordination transformation
         if (update_transformation_)

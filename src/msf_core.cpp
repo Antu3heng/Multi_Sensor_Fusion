@@ -40,11 +40,11 @@ namespace multiSensorFusion
             currentState_->imuData_ = data;
             imuProcessor_->predict((--(state_buffer_.end()))->second, currentState_);
             state_buffer_.insert(std::pair<double, baseStatePtr>(currentState_->timestamp_, currentState_));
-            screenFutureMeasurement();
+            checkFutureMeasurement();
         }
     }
 
-    void msf_core::inputVIO(const vioDataPtr &data)
+    void msf_core::inputVIO(const odomDataPtr &data)
     {
         if (!isInitialized())
         {
@@ -61,7 +61,7 @@ namespace multiSensorFusion
         }
     }
 
-    void msf_core::inputMapLoc(const mapLocDataPtr &data)
+    void msf_core::inputMapLoc(const poseDataPtr &data)
     {
         if (isInitialized())
         {
@@ -75,14 +75,14 @@ namespace multiSensorFusion
                         mapLocProcessor_->getInitTransformation(it->second, data);
                         isWithMap_ = true;
                     }
-#ifdef DEBUG
+#ifdef TEST_DEBUG
                     else
                         std::cerr
                                 << "[msf_core]: Map pose and IMU's timestamps are not synchronized, which can't be used to get the map!"
                                 << std::endl;
 #endif
                 }
-#ifdef DEBUG
+#ifdef TEST_DEBUG
                 else
                     std::cerr << "[msf_core]: Map pose is forward the IMU, which can't be used to get the map!" << std::endl;
 #endif
@@ -109,7 +109,7 @@ namespace multiSensorFusion
         auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
         if (it == state_buffer_.end())
         {
-#ifdef DEBUG
+#ifdef TEST_DEBUG
             std::cerr << "[msf_core]: The new measurement is forward the states!" << std::endl;
 #endif
             futureMeas_buffer_.insert(std::pair<double, baseDataPtr>(data->timestamp_, data));
@@ -122,7 +122,7 @@ namespace multiSensorFusion
                 return true;
             } else
             {
-#ifdef DEBUG
+#ifdef TEST_DEBUG
                 std::cerr << "[msf_core]: The new measurement and states' timestamps are not synchronized!"
                           << std::endl;
 #endif
@@ -145,21 +145,21 @@ namespace multiSensorFusion
             {
                 case VIO:
                 {
-#ifdef DEBUG
+#ifdef TEST_DEBUG
                     std::cerr << "[msf_core]: VIO update!!!"
                           << std::endl;
 #endif
-                    vioProcessor_->updateState(itState->second, std::dynamic_pointer_cast<vioData>(itSensor->second));
+                    vioProcessor_->updateState(itState->second, std::dynamic_pointer_cast<odomData>(itSensor->second));
                     break;
                 }
                 case MapLoc:
                 {
-#ifdef DEBUG
+#ifdef TEST_DEBUG
                     std::cerr << "[msf_core]: MapLoc update!!!"
                           << std::endl;
 #endif
                     mapLocProcessor_->updateState(itState->second,
-                                                  std::dynamic_pointer_cast<mapLocData>(itSensor->second));
+                                                  std::dynamic_pointer_cast<poseData>(itSensor->second));
                     break;
                 }
                 default:
@@ -173,7 +173,7 @@ namespace multiSensorFusion
         }
     }
 
-    void msf_core::screenFutureMeasurement()
+    void msf_core::checkFutureMeasurement()
     {
         for (auto it = futureMeas_buffer_.begin(); it != futureMeas_buffer_.end();)
         {

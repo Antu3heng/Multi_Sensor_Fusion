@@ -44,21 +44,19 @@ namespace multiSensorFusion
     };
     using imuDataPtr = std::shared_ptr<imuData>;
 
-    struct vioData : public baseData
+    struct poseData : public baseData
     {
         Eigen::Vector3d pos_;
-        Eigen::Vector3d vel_;
         Eigen::Quaterniond q_;
         Eigen::Matrix<double, 9, 9> cov_;
     };
-    using vioDataPtr = std::shared_ptr<vioData>;
+    using poseDataPtr = std::shared_ptr<poseData>;
 
-    struct mapLocData : public baseData
+    struct odomData : public poseData
     {
-        Eigen::Vector3d pos_;
-        Eigen::Quaterniond q_;
+        Eigen::Vector3d vel_;
     };
-    using mapLocDataPtr = std::shared_ptr<mapLocData>;
+    using odomDataPtr = std::shared_ptr<odomData>;
 
     struct gpsData : public baseData
     {

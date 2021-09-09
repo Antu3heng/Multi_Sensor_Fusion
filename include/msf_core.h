@@ -38,9 +38,9 @@ namespace multiSensorFusion
 
         void inputIMU(const imuDataPtr &data);
 
-        void inputVIO(const vioDataPtr &data);
+        void inputVIO(const odomDataPtr &data);
 
-        void inputMapLoc(const mapLocDataPtr &data);
+        void inputMapLoc(const poseDataPtr &data);
 
         baseState outputCurrentState();
 
@@ -50,7 +50,7 @@ namespace multiSensorFusion
 
         void applyMeasurement(const double &timestamp);
 
-        void screenFutureMeasurement();
+        void checkFutureMeasurement();
 
         std::shared_ptr<msf_initializer> initializer_;
         std::shared_ptr<msf_imu_processor> imuProcessor_;

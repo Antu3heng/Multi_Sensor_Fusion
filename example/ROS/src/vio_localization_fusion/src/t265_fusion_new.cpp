@@ -41,7 +41,7 @@ void imuCallback(const sensor_msgs::ImuConstPtr &msg)
 
 void t265Callback(const nav_msgs::OdometryConstPtr &msg)
 {
-    auto data = std::make_shared<multiSensorFusion::vioData>();
+    auto data = std::make_shared<multiSensorFusion::odomData>();
 
     data->timestamp_ = msg->header.stamp.toSec();
     data->type_ = multiSensorFusion::VIO;
@@ -72,7 +72,7 @@ void t265Callback(const nav_msgs::OdometryConstPtr &msg)
 
 void mapLocCallback(const geometry_msgs::PoseStampedConstPtr &msg)
 {
-    auto data = std::make_shared<multiSensorFusion::mapLocData>();
+    auto data = std::make_shared<multiSensorFusion::poseData>();
 
     data->timestamp_ = msg->header.stamp.toSec();
     data->type_ = multiSensorFusion::MapLoc;

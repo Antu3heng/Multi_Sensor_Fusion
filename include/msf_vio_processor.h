@@ -30,7 +30,7 @@ namespace multiSensorFusion
 
         ~msf_vio_processor() = default;
 
-        void updateState(baseStatePtr &currentState, const vioDataPtr &data);
+        void updateState(baseStatePtr &currentState, const odomDataPtr &data);
 
     private:
         // the transformation from VIO's coordinate system to imu's coordinate system
