@@ -35,8 +35,8 @@ void imuCallback(const sensor_msgs::ImuConstPtr &msg)
 
     data->timestamp_ = msg->header.stamp.toSec();
     data->type_ = multiSensorFusion::IMU;
-    data->acc_ << msg->linear_acceleration.z, -msg->linear_acceleration.x, -msg->linear_acceleration.y;
-    data->gyro_ << msg->angular_velocity.z, -msg->angular_velocity.x, -msg->angular_velocity.y;
+    data->acc_ << msg->linear_acceleration.z, msg->linear_acceleration.x, msg->linear_acceleration.y;
+    data->gyro_ << msg->angular_velocity.z, msg->angular_velocity.x, msg->angular_velocity.y;
     
     fusion.inputIMU(data);
 }
@@ -55,7 +55,7 @@ void t265Callback(const nav_msgs::OdometryConstPtr &msg)
     data->cov_.block<3, 3>(0, 0) = poseCov.block<3, 3>(0, 0);
     data->cov_.block<3, 3>(3, 3) = twistCov.block<3, 3>(0, 0);
     data->cov_.block<3, 3>(6, 6) = poseCov.block<3, 3>(3, 3);
-
+    
     // get d400 pose from t265 pose
     Eigen::Isometry3d T_2w2b = Eigen::Isometry3d::Identity();
     T_2w2b.rotate(data->q_);
@@ -64,12 +64,15 @@ void t265Callback(const nav_msgs::OdometryConstPtr &msg)
     // compute the translation between t265 and d435i reference coordination
     if (!t265_get)
     {
-        T_42b = T_42w = Eigen::Isometry3d::Identity();
-        T_42b.pretranslate(Eigen::Vector3d(0, 0, 0.125));
+        T_42b = Eigen::Isometry3d::Identity();
+        T_42b.linear() << 0.707, 0, 0.707,
+                        0, 1, 0,
+                        -0.707, 0, 0.707;
+        T_42b.pretranslate(Eigen::Vector3d(-0.02, 0, -0.025));
         T_24b = T_42b.inverse();
         Eigen::Isometry3d T_2w4b = T_2w2b * T_24b;
         Eigen::Isometry3d T_4w4b = Eigen::Isometry3d::Identity();
-        T_4w4b.linear() = T_42w.linear() * T_2w4b.linear();
+        T_4w4b.linear() = T_2w4b.linear();
         T_42w = T_4w4b * T_2w4b.inverse();
         T_24w = T_42w.inverse();
         t265_get = true;
@@ -98,8 +101,8 @@ void mapLocCallback(const geometry_msgs::PoseStampedConstPtr &msg)
     Tmc.rotate(q);
     Tmc.pretranslate(pos);
     Eigen::Isometry3d Tci = Eigen::Isometry3d::Identity();
-    Tci.linear() << 0, -1, 0,
-                    0, 0, -1,
+    Tci.linear() << 0, 1, 0,
+                    0, 0, 1,
                     1, 0, 0;
     Tci.pretranslate(Eigen::Vector3d(0.0361, -0.0055, -0.0205));
     Eigen::Isometry3d Tmi = Tmc * Tci;

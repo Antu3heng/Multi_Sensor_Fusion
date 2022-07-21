@@ -26,7 +26,7 @@ namespace multiSensorFusion
         msf_vio_processor();
 
         msf_vio_processor(Eigen::Vector3d imu_p_vio, const Eigen::Quaterniond &imu_q_vio,
-                          bool update_transformation);
+                          bool update_transformation = false);
 
         ~msf_vio_processor() = default;
 

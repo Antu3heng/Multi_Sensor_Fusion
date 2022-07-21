@@ -19,25 +19,35 @@ namespace multiSensorFusion
     {
         imu_p_map_ = Eigen::Vector3d::Zero();
         imu_q_map_ = Eigen::Quaterniond::Identity();
-        update_transformation_ = false;
         n_pos_ = 0.2;
         n_q_ = 5.;
+        update_transformation_ = false;
+        cov_ = Eigen::Matrix<double, 6, 6>::Identity();
+        cov_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.01 * 0.01;
+        cov_.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 1.0 * degreeToRadian * 1.0 * degreeToRadian;
+    }
+
+    msf_mapLoc_processor::msf_mapLoc_processor(double n_pos, double n_q, bool update_transformation)
+            : update_transformation_(update_transformation), n_pos_(n_pos), n_q_(n_q)
+    {
+        imu_p_map_ = Eigen::Vector3d::Zero();
+        imu_q_map_ = Eigen::Quaterniond::Identity();
+        cov_ = Eigen::Matrix<double, 6, 6>::Identity();
+        cov_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.01 * 0.01;
+        cov_.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 1.0 * degreeToRadian * 1.0 * degreeToRadian;
     }
 
     msf_mapLoc_processor::msf_mapLoc_processor(Eigen::Vector3d imu_p_map, const Eigen::Quaterniond &imu_q_map,
-                                               double n_pos,
-                                               double n_q, bool update_transformation = false)
+                                               double n_pos, double n_q, bool update_transformation)
             : imu_p_map_(std::move(imu_p_map)), imu_q_map_(imu_q_map), update_transformation_(update_transformation),
               n_pos_(n_pos), n_q_(n_q)
     {
-        if (update_transformation_)
-        {
-            cov_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
-            cov_.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
-        }
+        cov_ = Eigen::Matrix<double, 6, 6>::Identity();
+        cov_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.01 * 0.01;
+        cov_.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 1.0 * degreeToRadian * 1.0 * degreeToRadian;
     }
 
-    void msf_mapLoc_processor::getInitTransformation(const baseStatePtr &state, const poseDataPtr &data)
+    void msf_mapLoc_processor::setInitTransformation(const baseStatePtr &state, const poseDataPtr &data)
     {
         Eigen::Isometry3d map_T_i = getTFromRotAndTranslation(data->pos_, data->q_);
         Eigen::Isometry3d imu_T_i = getTFromRotAndTranslation(state->pos_, state->q_);
@@ -45,9 +55,6 @@ namespace multiSensorFusion
         imu_p_map_ = imu_T_map.translation();
         imu_q_map_ = imu_T_map.linear();
         imu_q_map_.normalized();
-        n_pos_ = 0.2;
-        n_q_ = 5.;
-        update_transformation_ = true;
     }
 
     void msf_mapLoc_processor::updateState(baseStatePtr &currentState, const poseDataPtr &data)
@@ -134,13 +141,15 @@ namespace multiSensorFusion
         Eigen::MatrixXd G = Eigen::MatrixXd::Identity(18, 18);
         G.block<3, 3>(6, 6) -= skew_symmetric(0.5 * delta_states.segment(6, 3));
         currentState->cov_ = G * currentState->cov_ * G.transpose();
+        currentState->cov_ = (currentState->cov_ + currentState->cov_.transpose()) / 2;
     }
 
     void msf_mapLoc_processor::transformStateToMap(baseStatePtr &state)
     {
-        state->isWithMap_ = true;
         state->posInMap_ = imu_q_map_.conjugate() * (state->pos_ - imu_p_map_);
         state->velInMap_ = imu_q_map_.conjugate() * state->vel_;
         state->qInMap_ = imu_q_map_.conjugate() * state->q_;
+        state->imu_p_map_ = imu_p_map_;
+        state->imu_q_map_ = imu_q_map_;
     }
 }

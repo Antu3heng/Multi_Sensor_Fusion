@@ -14,12 +14,14 @@
 namespace multiSensorFusion
 {
     msf_core::msf_core()
-            : initialized_(false), isWithMap_(false)
+            : useMoCap_(false), initialized_(false), isWithMap_(false), isWithMoCap_(false)
     {
         initializer_ = std::make_shared<msf_initializer>();
         imuProcessor_ = std::make_shared<msf_imu_processor>();
-        vioProcessor_ = std::make_shared<msf_vio_processor>();
-        mapLocProcessor_ = std::make_shared<msf_mapLoc_processor>();
+        vioProcessor_ = std::make_shared<msf_vio_processor>(Eigen::Vector3d::Zero(), Eigen::Quaterniond::Identity(), true);
+        mapLocProcessor_ = std::make_shared<msf_mapLoc_processor>(0.1, 1, true);
+        waypointProcessor_ = std::make_shared<msf_waypoint_processor>();
+        moCapProcessor_ = std::make_shared<msf_mapLoc_processor>(0.1, 0.1, true);
         currentState_ = std::make_shared<baseState>();
     }
 
@@ -30,6 +32,13 @@ namespace multiSensorFusion
 
     void msf_core::inputIMU(const imuDataPtr &data)
     {
+#ifdef TEST_DEBUG
+        std::cout << "======================================" << std::endl;
+        std::cout << "state buffer size: " << state_buffer_.size() << std::endl;
+        std::cout << "measurement buffer size: " << meas_buffer_.size() << std::endl;
+        std::cout << "future measurement buffer size: " << futureMeas_buffer_.size() << std::endl;
+        std::cout << std::endl;
+#endif
         if (!isInitialized())
         {
             initializer_->addIMU(data);
@@ -41,6 +50,7 @@ namespace multiSensorFusion
             imuProcessor_->predict((--(state_buffer_.end()))->second, currentState_);
             state_buffer_.insert(std::pair<double, baseStatePtr>(currentState_->timestamp_, currentState_));
             checkFutureMeasurement();
+            pruneBuffer();
         }
     }
 
@@ -72,7 +82,7 @@ namespace multiSensorFusion
                 {
                     if (fabs(it->first - data->timestamp_) <= 0.003)
                     {
-                        mapLocProcessor_->getInitTransformation(it->second, data);
+                        mapLocProcessor_->setInitTransformation(it->second, data);
                         isWithMap_ = true;
                     }
 #ifdef TEST_DEBUG
@@ -94,14 +104,30 @@ namespace multiSensorFusion
         }
     }
 
+    void msf_core::inputWaypoint(const posDataPtr &data)
+    {
+        if (isInitialized())
+        {
+            if (addMeasurement(data))
+                applyMeasurement(data->timestamp_);
+        }
+    }
+
     baseState msf_core::outputCurrentState()
     {
         currentState_ = (--state_buffer_.end())->second;
-        if (isWithMap_)
+        if (useMoCap_ && isWithMoCap_)
+        {
+            moCapProcessor_->transformStateToMap(currentState_);
+            currentState_->isWithMap_ = true;
+        }
+        else if (!useMoCap_ && isWithMap_)
+        {
             mapLocProcessor_->transformStateToMap(currentState_);
+            currentState_->isWithMap_ = true;
+        }
         return *currentState_;
     }
-
 
 
     bool msf_core::addMeasurement(const baseDataPtr &data)
@@ -162,6 +188,18 @@ namespace multiSensorFusion
                                                   std::dynamic_pointer_cast<poseData>(itSensor->second));
                     break;
                 }
+                case Waypoint:
+                {
+                    waypointProcessor_->updateState(itState->second,
+                                                    std::dynamic_pointer_cast<posData>(itSensor->second));
+                    break;
+                }
+                case MoCap:
+                {
+                    moCapProcessor_->updateState(itState->second,
+                                                 std::dynamic_pointer_cast<poseData>(itSensor->second));
+                    break;
+                }
                 default:
                     break;
             }
@@ -188,4 +226,36 @@ namespace multiSensorFusion
             }
         }
     }
+
+    void msf_core::pruneBuffer()
+    {
+        while (state_buffer_.size() > max_buffer_size)
+            state_buffer_.erase(state_buffer_.begin());
+        while (meas_buffer_.size() > max_buffer_size)
+            meas_buffer_.erase((meas_buffer_.begin()));
+    }
+
+    void msf_core::inputMoCap(const poseDataPtr &data)
+    {
+        if (isInitialized())
+        {
+            if (!isWithMoCap_)
+            {
+                auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
+                if (it != state_buffer_.end())
+                {
+                    if (fabs(it->first - data->timestamp_) <= 0.003)
+                    {
+                        moCapProcessor_->setInitTransformation(it->second, data);
+                        isWithMoCap_ = true;
+                    }
+                }
+            } else
+            {
+                if (addMeasurement(data))
+                    applyMeasurement(data->timestamp_);
+            }
+        }
+    }
+
 }

@@ -53,6 +53,21 @@ namespace multiSensorFusion
                 return false;
             } else
             {
+                // init the state with imu data
+                Eigen::Vector3d sum_acc = Eigen::Vector3d::Zero();
+                for (auto &imu: imu_buffer_)
+                    sum_acc += imu.second->acc_;
+                Eigen::Vector3d mean_acc = sum_acc / (double) imu_buffer_.size();
+                Eigen::Vector3d sum_err2 = Eigen::Vector3d::Zero();
+                for (auto &imu: imu_buffer_)
+                    sum_err2 += (imu.second->acc_ - mean_acc).cwiseAbs2();
+                Eigen::Vector3d std_acc = (sum_err2 / (double) imu_buffer_.size()).cwiseSqrt();
+                if (std_acc.maxCoeff() > 3)
+                {
+                    std::cerr << "IMU acc std is too big: " << std_acc.transpose() << std::endl;
+                    return false;
+                }
+
                 // TODO: some imu data will be abandoned? whether we can use imu processor to use these data?
                 currentState->timestamp_ = it->first;
                 currentState->imuData_ = it->second;
@@ -62,7 +77,7 @@ namespace multiSensorFusion
                 currentState->q_ = init_imu_q_vio_ * data->q_;
                 currentState->q_.normalized();
                 currentState->ba_ = currentState->bw_ = Eigen::Vector3d::Zero();
-                currentState->g_ = Eigen::Vector3d(0., 0., -9.8);
+                currentState->g_ = Eigen::Vector3d(0., 0., -1) * mean_acc.norm();
 
                 // currentState->cov_.block<9, 9>(0, 0) = data->cov_;
                 currentState->cov_.block<6, 6>(0, 0) = Eigen::Matrix<double, 6, 6>::Identity();

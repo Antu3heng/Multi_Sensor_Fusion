@@ -70,3 +70,27 @@ target_link_libraries(t265_fusion_new_node
   ${catkin_LIBRARIES}
   ${LIBS}
 )
+
+add_executable(jkw_t265_fusion_node 
+src/jkw_t265_fusion.cpp)
+
+target_link_libraries(jkw_t265_fusion_node
+  ${catkin_LIBRARIES}
+  ${LIBS}
+)
+
+add_executable(t265_d400_fusion_node 
+src/t265_d400_fusion.cpp)
+
+target_link_libraries(t265_d400_fusion_node
+  ${catkin_LIBRARIES}
+  ${LIBS}
+)
+
+add_executable(jkw_drone_fusion_node 
+src/jkw_drone_fusion.cpp)
+
+target_link_libraries(jkw_drone_fusion_node
+  ${catkin_LIBRARIES}
+  ${LIBS}
+)

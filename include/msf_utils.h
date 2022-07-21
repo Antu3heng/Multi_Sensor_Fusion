@@ -27,13 +27,12 @@ namespace multiSensorFusion
         const double q_squared = theta.squaredNorm() / 4.0;
 
         if (q_squared < 1)
-        {
-            return Eigen::Quaterniond(sqrt(1 - q_squared), theta[0] * 0.5, theta[1] * 0.5, theta[2] * 0.5);
-        } else
+            return {sqrt(1 - q_squared), theta[0] * 0.5, theta[1] * 0.5, theta[2] * 0.5};
+        else
         {
             const double w = 1.0 / sqrt(1 + q_squared);
             const double f = w * 0.5;
-            return Eigen::Quaterniond(w, theta[0] * f, theta[1] * f, theta[2] * f);
+            return {w, theta[0] * f, theta[1] * f, theta[2] * f};
         }
     }
 

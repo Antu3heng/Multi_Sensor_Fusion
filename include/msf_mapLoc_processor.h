@@ -25,12 +25,14 @@ namespace multiSensorFusion
     public:
         msf_mapLoc_processor();
 
+        msf_mapLoc_processor(double n_pos, double n_q, bool update_transformation = false);
+
         msf_mapLoc_processor(Eigen::Vector3d imu_p_map, const Eigen::Quaterniond &imu_q_map, double n_pos,
-                             double n_q, bool update_transformation);
+                             double n_q, bool update_transformation = false);
 
         ~msf_mapLoc_processor() = default;
 
-        void getInitTransformation(const baseStatePtr &state, const poseDataPtr &data);
+        void setInitTransformation(const baseStatePtr &state, const poseDataPtr &data);
 
         void updateState(baseStatePtr &currentState, const poseDataPtr &data);
 
@@ -42,11 +44,11 @@ namespace multiSensorFusion
         Eigen::Quaterniond imu_q_map_;
         Eigen::Matrix<double, 6, 6> cov_;
 
-        bool update_transformation_;
+        bool update_transformation_{};
 
         // map-based localization noise parameters
         // unit: n_pos_-m n_q_-degree
-        double n_pos_, n_q_;;
+        double n_pos_{}, n_q_{};;
     };
 }
 

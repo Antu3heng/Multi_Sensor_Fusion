@@ -13,6 +13,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall  -O3")
 option(TEST_DEBUG "option for debug output" OFF)
 if (TEST_DEBUG)
     add_definitions(-DTEST_DEBUG)
+    set(CMAKE_BUILD_TYPE Debug)
 endif ()
 
 # Check C++11 or C++0x support
@@ -54,6 +55,7 @@ add_library(${PROJECT_NAME} SHARED
         src/msf_imu_processor.cpp
         src/msf_vio_processor.cpp
         src/msf_mapLoc_processor.cpp
-        src/msf_initializer.cpp)
+        src/msf_initializer.cpp
+        src/msf_waypoint_processor.cpp)
 
 target_link_libraries(${PROJECT_NAME} libGeographiccc)

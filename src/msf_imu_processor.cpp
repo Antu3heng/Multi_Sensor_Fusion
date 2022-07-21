@@ -86,7 +86,6 @@ namespace multiSensorFusion
         Qi.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity() * n_bw_ * n_bw_;
         Eigen::MatrixXd Q = Fi * Qi * Fi.transpose();
         currentState->cov_ = F * lastState->cov_ * F.transpose() + Q;
+        currentState->cov_ = (currentState->cov_ + currentState->cov_.transpose()) / 2;
     }
 }
-
-

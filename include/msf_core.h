@@ -24,6 +24,7 @@
 #include "msf_imu_processor.h"
 #include "msf_vio_processor.h"
 #include "msf_mapLoc_processor.h"
+#include "msf_waypoint_processor.h"
 
 namespace multiSensorFusion
 {
@@ -42,25 +43,37 @@ namespace multiSensorFusion
 
         void inputMapLoc(const poseDataPtr &data);
 
+        void inputWaypoint(const posDataPtr &data);
+
+        void inputMoCap(const poseDataPtr &data);
+
         baseState outputCurrentState();
 
+        bool useMoCap_;
+
     private:
-        // bool addMeasurement(sensorType type, const double &timestamp);
         bool addMeasurement(const baseDataPtr &data);
 
         void applyMeasurement(const double &timestamp);
 
         void checkFutureMeasurement();
 
+        void pruneBuffer();
+
         std::shared_ptr<msf_initializer> initializer_;
         std::shared_ptr<msf_imu_processor> imuProcessor_;
         std::shared_ptr<msf_vio_processor> vioProcessor_;
         std::shared_ptr<msf_mapLoc_processor> mapLocProcessor_;
+        std::shared_ptr<msf_waypoint_processor> waypointProcessor_;
+        std::shared_ptr<msf_mapLoc_processor> moCapProcessor_;
 
         bool initialized_;
         bool isWithMap_;
+        bool isWithMoCap_;
 
         baseStatePtr currentState_;
+
+        const int max_buffer_size = 1000;
 
         std::map<double, baseStatePtr> state_buffer_;
 
