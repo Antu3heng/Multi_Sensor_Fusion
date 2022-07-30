@@ -46,51 +46,59 @@ ${EIGEN3_LIBS}
 /home/antusheng/research/map_based_localization/test/Multi_Sensor_Fusion/lib/libMulti_Sensor_Fusion.so
 )
 
-add_executable(t265_localization_fusion_node 
-src/t265_localization_fusion_node.cpp
-src/t265_localization_wrapper.cpp)
+# add_executable(t265_localization_fusion_node 
+# src/t265_localization_fusion_node.cpp
+# src/t265_localization_wrapper.cpp)
 
-target_link_libraries(t265_localization_fusion_node
-  ${catkin_LIBRARIES}
-  ${LIBS}
-)
+# target_link_libraries(t265_localization_fusion_node
+#   ${catkin_LIBRARIES}
+#   ${LIBS}
+# )
 
-add_executable(t265_fusion_node 
-src/t265_fusion.cpp)
+# add_executable(t265_fusion_node 
+# src/t265_fusion.cpp)
 
-target_link_libraries(t265_fusion_node
-  ${catkin_LIBRARIES}
-  ${LIBS}
-)
+# target_link_libraries(t265_fusion_node
+#   ${catkin_LIBRARIES}
+#   ${LIBS}
+# )
 
-add_executable(t265_fusion_new_node 
-src/t265_fusion_new.cpp)
+# add_executable(t265_fusion_new_node 
+# src/t265_fusion_new.cpp)
 
-target_link_libraries(t265_fusion_new_node
-  ${catkin_LIBRARIES}
-  ${LIBS}
-)
+# target_link_libraries(t265_fusion_new_node
+#   ${catkin_LIBRARIES}
+#   ${LIBS}
+# )
 
-add_executable(jkw_t265_fusion_node 
-src/jkw_t265_fusion.cpp)
+# add_executable(jkw_t265_fusion_node 
+# src/jkw_t265_fusion.cpp)
 
-target_link_libraries(jkw_t265_fusion_node
-  ${catkin_LIBRARIES}
-  ${LIBS}
-)
+# target_link_libraries(jkw_t265_fusion_node
+#   ${catkin_LIBRARIES}
+#   ${LIBS}
+# )
 
-add_executable(t265_d400_fusion_node 
-src/t265_d400_fusion.cpp)
+# add_executable(t265_d400_fusion_node 
+# src/t265_d400_fusion.cpp)
 
-target_link_libraries(t265_d400_fusion_node
-  ${catkin_LIBRARIES}
-  ${LIBS}
-)
+# target_link_libraries(t265_d400_fusion_node
+#   ${catkin_LIBRARIES}
+#   ${LIBS}
+# )
 
-add_executable(jkw_drone_fusion_node 
-src/jkw_drone_fusion.cpp)
+# add_executable(jkw_drone_fusion_node 
+# src/jkw_drone_fusion.cpp)
 
-target_link_libraries(jkw_drone_fusion_node
+# target_link_libraries(jkw_drone_fusion_node
+#   ${catkin_LIBRARIES}
+#   ${LIBS}
+# )
+
+add_executable(t265_d400_fusion_new_msf 
+src/t265_d400_fusion_new_msf.cpp)
+
+target_link_libraries(t265_d400_fusion_new_msf
   ${catkin_LIBRARIES}
   ${LIBS}
 )

@@ -19,14 +19,13 @@
 
 namespace multiSensorFusion
 {
-    enum sensorType
+    enum dataType
     {
         IMU,
-        VIO,
         GPS,
-        MapLoc,
-        Waypoint,
-        MoCap
+        Pos,
+        Pose,
+        Odom
     };
 
     struct baseData
@@ -35,7 +34,8 @@ namespace multiSensorFusion
         virtual ~baseData() = default;;
 
         double timestamp_;
-        sensorType type_;
+        dataType type_;
+        std::string name_;
     };
     using baseDataPtr = std::shared_ptr<baseData>;
 
@@ -49,7 +49,7 @@ namespace multiSensorFusion
     struct posData : public baseData
     {
         Eigen::Vector3d pos_;
-        Eigen::Matrix<double, 3, 3> cov_;
+        Eigen::Matrix3d cov_;
     };
     using posDataPtr = std::shared_ptr<posData>;
 
@@ -88,13 +88,13 @@ namespace multiSensorFusion
         Eigen::Matrix<double, 18, 18> cov_;
 
         bool isWithMap_;
-        Eigen::Vector3d posInMap_;
-        Eigen::Vector3d velInMap_;
-        Eigen::Quaterniond qInMap_;
-        Eigen::Vector3d imu_p_map_;
-        Eigen::Quaterniond imu_q_map_;
+        Eigen::Vector3d pos_in_global_;
+        Eigen::Vector3d vel_in_global_;
+        Eigen::Quaterniond q_in_global_;
+        Eigen::Vector3d local_p_global_;
+        Eigen::Quaterniond local_q_global_;
 
-        imuDataPtr imuData_;
+        imuDataPtr imu_data_;
     };
     using baseStatePtr = std::shared_ptr<baseState>;
 }

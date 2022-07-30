@@ -34,13 +34,15 @@ endif ()
 
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
-find_package(Eigen3 REQUIRED)
-
 add_subdirectory(third_party/GeographicLib)
+
+find_package(Eigen3 REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 include_directories(
         ${PROJECT_SOURCE_DIR}
         ${EIGEN3_INCLUDE_DIR}
+        ${YAML_CPP_INCLUDE_DIR}
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/third_party/GeographicLib/include
 )
@@ -53,9 +55,9 @@ add_library(${PROJECT_NAME} SHARED
         src/imuGPSFusion.cpp
         src/baseKF.cpp
         src/msf_imu_processor.cpp
-        src/msf_vio_processor.cpp
-        src/msf_mapLoc_processor.cpp
+        src/msf_odom_processor.cpp
+        src/msf_pose_processor.cpp
         src/msf_initializer.cpp
-        src/msf_waypoint_processor.cpp)
+        src/msf_pos_processor.cpp)
 
-target_link_libraries(${PROJECT_NAME} libGeographiccc)
+target_link_libraries(${PROJECT_NAME} libGeographiccc yaml-cpp)

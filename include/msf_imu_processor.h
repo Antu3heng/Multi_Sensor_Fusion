@@ -23,7 +23,7 @@ namespace multiSensorFusion
     class msf_imu_processor
     {
     public:
-        msf_imu_processor();
+        msf_imu_processor() = delete;
 
         msf_imu_processor(const double &n_a, const double &n_w, const double &n_ba, const double &n_bw);
 
@@ -31,7 +31,7 @@ namespace multiSensorFusion
 
         void predict(const baseStatePtr &lastState, baseStatePtr &currentState) const;
 
-        static void predictState(const baseStatePtr &lastState, baseStatePtr &currentState) ;
+        static void predictState(const baseStatePtr &lastState, baseStatePtr &currentState);
 
         void propagateCov(const baseStatePtr &lastState, baseStatePtr &currentState) const;
 

@@ -13,16 +13,199 @@
 
 namespace multiSensorFusion
 {
-    msf_core::msf_core()
-            : useMoCap_(false), initialized_(false), isWithMap_(false), isWithMoCap_(false)
+    msf_core::msf_core(const std::string &config_file_path)
     {
-        initializer_ = std::make_shared<msf_initializer>();
-        imuProcessor_ = std::make_shared<msf_imu_processor>();
-        vioProcessor_ = std::make_shared<msf_vio_processor>(Eigen::Vector3d::Zero(), Eigen::Quaterniond::Identity(), true);
-        mapLocProcessor_ = std::make_shared<msf_mapLoc_processor>(0.1, 1, true);
-        waypointProcessor_ = std::make_shared<msf_waypoint_processor>();
-        moCapProcessor_ = std::make_shared<msf_mapLoc_processor>(0.1, 0.1, true);
-        currentState_ = std::make_shared<baseState>();
+        YAML::Node config;
+        try
+        {
+            config = YAML::LoadFile(config_file_path);
+        } catch (YAML::BadFile &e)
+        {
+            std::cerr << "Wrong path to config file!" << std::endl;
+            exit(-1);
+        }
+
+        if (!config["imu"])
+        {
+            std::cerr << "Need to provide imu parameters!" << std::endl;
+            exit(1);
+        }
+
+        auto vec_body_q_imu = config["imu"]["body_q_imu"].as<std::vector<double>>();
+        body_q_imu_ = Eigen::Quaterniond(vec_body_q_imu[3], vec_body_q_imu[0], vec_body_q_imu[1], vec_body_q_imu[2]);
+
+        auto n_a = config["imu"]["acc_noise_density"].as<double>();
+        auto n_ba = config["imu"]["acc_random_walk"].as<double>();
+        auto n_w = config["imu"]["gyr_noise_density"].as<double>();
+        auto n_bw = config["imu"]["gyr_random_walk"].as<double>();
+        imuProcessor_ = std::make_shared<msf_imu_processor>(n_a, n_w, n_ba, n_bw);
+
+        auto initializer_buffer_size = config["imu"]["initializer_buffer_size"].as<int>();
+        auto initializer_max_acc_std = config["imu"]["initializer_max_acc_std"].as<double>();
+        initializer_ = std::make_shared<msf_initializer>(initializer_buffer_size, initializer_max_acc_std);
+
+        if (config["pos_sensor"])
+        {
+            int num_pos_sensor = config["pos_sensor"]["quantity"].as<int>();
+            for (int i = 1; i <= num_pos_sensor; i++)
+            {
+                std::string sensor_idx = "sensor" + std::to_string(i);
+
+                auto vec_body_T_sensor = config["pos_sensor"][sensor_idx]["body_T_sensor"].as<std::vector<double>>();
+                auto body_p_sensor = Eigen::Vector3d(vec_body_T_sensor[0], vec_body_T_sensor[1], vec_body_T_sensor[2]);
+                auto body_q_sensor = Eigen::Quaterniond(vec_body_T_sensor[6], vec_body_T_sensor[3],
+                                                        vec_body_T_sensor[4], vec_body_T_sensor[5]);
+                if (!config["pos_sensor"][sensor_idx]["local_T_global"])
+                {
+                    std::cerr
+                            << "Need to provide the transformation from position sensor's world coordinate system to MSF's world coordinate system!"
+                            << std::endl;
+                    exit(1);
+                }
+                auto vec_local_T_global = config["pos_sensor"][sensor_idx]["local_T_global"].as<std::vector<double>>();
+                auto local_p_global = Eigen::Vector3d(vec_local_T_global[0], vec_local_T_global[1],
+                                                      vec_local_T_global[2]);
+                auto local_q_global = Eigen::Quaterniond(vec_local_T_global[6], vec_local_T_global[3],
+                                                         vec_local_T_global[4], vec_local_T_global[5]);
+
+                auto pos_processor = std::make_shared<msf_pos_processor>(body_p_sensor, body_q_sensor, local_p_global,local_q_global);
+                if (!config["pos_sensor"][sensor_idx]["input_with_cov"].as<int>())
+                {
+                    auto n_pos = config["pos_sensor"][sensor_idx]["n_pos"].as<double>();
+                    pos_processor->fixNoise(n_pos);
+                }
+                std::string sensor_name = config["pos_sensor"][sensor_idx]["name"].as<std::string>();
+                posProcessors_[sensor_name] = pos_processor;
+
+                if (config["pos_sensor"][sensor_idx]["use_for_initial"].as<int>())
+                {
+                    initial_sensor_name_ = sensor_name;
+                }
+
+                if (config["pos_sensor"][sensor_idx]["use_for_global"].as<int>())
+                {
+                    if (!global_sensor_name_.empty())
+                    {
+                        std::cerr << "More than one sensor used for global!" << std::endl;
+                        exit(-1);
+                    }
+                    global_sensor_type_ = Pos;
+                    global_sensor_name_ = sensor_name;
+                    is_with_map_ = true;
+                }
+            }
+        }
+
+        if (config["pose_sensor"])
+        {
+            int num_pose_sensor = config["pose_sensor"]["quantity"].as<int>();
+            for (int i = 1; i <= num_pose_sensor; i++)
+            {
+                std::string sensor_idx = "sensor" + std::to_string(i);
+
+                std::shared_ptr<msf_pose_processor> pose_processor;
+
+                auto vec_body_T_sensor = config["pose_sensor"][sensor_idx]["body_T_sensor"].as<std::vector<double>>();
+                auto body_p_sensor = Eigen::Vector3d(vec_body_T_sensor[0], vec_body_T_sensor[1], vec_body_T_sensor[2]);
+                auto body_q_sensor = Eigen::Quaterniond(vec_body_T_sensor[6], vec_body_T_sensor[3],
+                                                        vec_body_T_sensor[4], vec_body_T_sensor[5]);
+                bool get_transformation = false;
+                if (config["pose_sensor"][sensor_idx]["local_T_global"])
+                {
+                    get_transformation = true;
+                    auto vec_local_T_global = config["pose_sensor"][sensor_idx]["local_T_global"].as<std::vector<double>>();
+                    auto local_p_global = Eigen::Vector3d(vec_local_T_global[0], vec_local_T_global[1],
+                                                          vec_local_T_global[2]);
+                    auto local_q_global = Eigen::Quaterniond(vec_local_T_global[6], vec_local_T_global[3],
+                                                             vec_local_T_global[4], vec_local_T_global[5]);
+                    pose_processor = std::make_shared<msf_pose_processor>(body_p_sensor, body_q_sensor, local_p_global, local_q_global);
+                } else
+                    pose_processor = std::make_shared<msf_pose_processor>(body_p_sensor, body_q_sensor);
+                if (!config["pose_sensor"][sensor_idx]["input_with_cov"].as<int>())
+                {
+                    auto n_pos = config["pose_sensor"][sensor_idx]["n_pos"].as<double>();
+                    auto n_q = config["pose_sensor"][sensor_idx]["n_q"].as<double>();
+                    pose_processor->fixNoise(n_pos, n_q);
+                }
+                std::string sensor_name = config["pose_sensor"][sensor_idx]["name"].as<std::string>();
+                poseProcessors_[sensor_name] = pose_processor;
+
+                if (config["pose_sensor"][sensor_idx]["use_for_initial"].as<int>())
+                {
+                    initial_sensor_name_ = sensor_name;
+                }
+
+                if (config["pose_sensor"][sensor_idx]["use_for_global"].as<int>())
+                {
+                    if (!global_sensor_name_.empty())
+                    {
+                        std::cerr << "More than one sensor used for global!" << std::endl;
+                        exit(-1);
+                    }
+                    global_sensor_type_ = Pose;
+                    global_sensor_name_ = sensor_name;
+                    if (get_transformation)
+                        is_with_map_ = true;
+                }
+            }
+        }
+
+        if (config["odom_sensor"])
+        {
+            int num_odom_sensor = config["odom_sensor"]["quantity"].as<int>();
+            for (int i = 1; i <= num_odom_sensor; i++)
+            {
+                std::string sensor_idx = "sensor" + std::to_string(i);
+
+                std::shared_ptr<msf_odom_processor> odom_processor;
+
+                auto vec_body_T_sensor = config["odom_sensor"][sensor_idx]["body_T_sensor"].as<std::vector<double>>();
+                auto body_p_sensor = Eigen::Vector3d(vec_body_T_sensor[0], vec_body_T_sensor[1], vec_body_T_sensor[2]);
+                auto body_q_sensor = Eigen::Quaterniond(vec_body_T_sensor[6], vec_body_T_sensor[3],
+                                                        vec_body_T_sensor[4], vec_body_T_sensor[5]);
+                bool get_transformation = false;
+                if (config["odom_sensor"][sensor_idx]["local_T_global"])
+                {
+                    get_transformation = true;
+                    auto vec_local_T_global = config["odom_sensor"][sensor_idx]["local_T_global"].as<std::vector<double>>();
+                    auto local_p_global = Eigen::Vector3d(vec_local_T_global[0], vec_local_T_global[1],
+                                                          vec_local_T_global[2]);
+                    auto local_q_global = Eigen::Quaterniond(vec_local_T_global[6], vec_local_T_global[3],
+                                                             vec_local_T_global[4], vec_local_T_global[5]);
+                    odom_processor = std::make_shared<msf_odom_processor>(body_p_sensor, body_q_sensor, local_p_global, local_q_global);
+                } else
+                    odom_processor = std::make_shared<msf_odom_processor>(body_p_sensor, body_q_sensor);
+                if (!config["odom_sensor"][sensor_idx]["input_with_cov"].as<int>())
+                {
+                    auto n_pos = config["odom_sensor"][sensor_idx]["n_pos"].as<double>();
+                    auto n_q = config["odom_sensor"][sensor_idx]["n_q"].as<double>();
+                    auto  n_v = config["odom_sensor"][sensor_idx]["n_v"].as<double>();
+                    odom_processor->fixNoise(n_pos, n_q, n_v);
+                }
+                std::string sensor_name = config["odom_sensor"][sensor_idx]["name"].as<std::string>();
+                odomProcessors_[sensor_name] = odom_processor;
+
+                if (config["odom_sensor"][sensor_idx]["use_for_initial"].as<int>())
+                {
+                    initial_sensor_name_ = sensor_name;
+                }
+
+                if (config["odom_sensor"][sensor_idx]["use_for_global"].as<int>())
+                {
+                    if (!global_sensor_name_.empty())
+                    {
+                        std::cerr << "More than one sensor used for global!" << std::endl;
+                        exit(-1);
+                    }
+                    global_sensor_type_ = Odom;
+                    global_sensor_name_ = sensor_name;
+                    if (get_transformation)
+                        is_with_map_ = true;
+                }
+            }
+        }
+
+        current_state_ = std::make_shared<baseState>();
     }
 
     bool msf_core::isInitialized() const
@@ -32,6 +215,9 @@ namespace multiSensorFusion
 
     void msf_core::inputIMU(const imuDataPtr &data)
     {
+        data->acc_ = body_q_imu_ * data->acc_;
+        data->gyro_ = body_q_imu_ * data->gyro_;
+
 #ifdef TEST_DEBUG
         std::cout << "======================================" << std::endl;
         std::cout << "state buffer size: " << state_buffer_.size() << std::endl;
@@ -39,94 +225,144 @@ namespace multiSensorFusion
         std::cout << "future measurement buffer size: " << futureMeas_buffer_.size() << std::endl;
         std::cout << std::endl;
 #endif
+
         if (!isInitialized())
         {
             initializer_->addIMU(data);
         } else
         {
-            currentState_ = std::make_shared<baseState>();
-            currentState_->timestamp_ = data->timestamp_;
-            currentState_->imuData_ = data;
-            imuProcessor_->predict((--(state_buffer_.end()))->second, currentState_);
-            state_buffer_.insert(std::pair<double, baseStatePtr>(currentState_->timestamp_, currentState_));
+            current_state_ = std::make_shared<baseState>();
+            current_state_->timestamp_ = data->timestamp_;
+            current_state_->imu_data_ = data;
+            imuProcessor_->predict((--(state_buffer_.end()))->second, current_state_);
+            state_buffer_.insert(std::pair<double, baseStatePtr>(current_state_->timestamp_, current_state_));
             checkFutureMeasurement();
             pruneBuffer();
         }
     }
 
-    void msf_core::inputVIO(const odomDataPtr &data)
+    void msf_core::inputPos(const posDataPtr &data)
     {
-        if (!isInitialized())
-        {
-            if (initializer_->initializeUsingVIO(data, currentState_))
-            {
-                std::cerr << "[msf_core]: The MSF has been initialized!" << std::endl;
-                initialized_ = true;
-                state_buffer_.insert(std::pair<double, baseStatePtr>(currentState_->timestamp_, currentState_));
-            }
-        } else
+        if (isInitialized())
         {
             if (addMeasurement(data))
                 applyMeasurement(data->timestamp_);
         }
     }
 
-    void msf_core::inputMapLoc(const poseDataPtr &data)
+    void msf_core::inputPose(const poseDataPtr &data)
     {
-        if (isInitialized())
+        if (!isInitialized())
         {
-            if (!isWithMap_)
+            if (initial_sensor_name_ == data->name_ && initializer_->initialize(data, current_state_))
+            {
+                std::cerr << "[msf_core]: The MSF has been initialized!" << std::endl;
+                initialized_ = true;
+                state_buffer_.insert(std::pair<double, baseStatePtr>(current_state_->timestamp_, current_state_));
+                if (!poseProcessors_[data->name_]->has_init_transformation_)
+                {
+                    poseProcessors_[data->name_]->setInitTransformation(current_state_, data);
+                    if (global_sensor_name_ == data->name_)
+                        is_with_map_ = true;
+                }
+            }
+        } else
+        {
+            if (poseProcessors_[data->name_]->has_init_transformation_)
+            {
+                if (addMeasurement(data))
+                    applyMeasurement(data->timestamp_);
+            } else
             {
                 auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
                 if (it != state_buffer_.end())
                 {
                     if (fabs(it->first - data->timestamp_) <= 0.003)
                     {
-                        mapLocProcessor_->setInitTransformation(it->second, data);
-                        isWithMap_ = true;
+                        poseProcessors_[data->name_]->setInitTransformation(it->second, data);
+                        if (global_sensor_name_ == data->name_)
+                            is_with_map_ = true;
                     }
 #ifdef TEST_DEBUG
                     else
                         std::cerr
-                                << "[msf_core]: Map pose and IMU's timestamps are not synchronized, which can't be used to get the map!"
+                                << "[msf_core]: " << data->name_ << " and IMU's timestamps are not synchronized!"
                                 << std::endl;
 #endif
                 }
-#ifdef TEST_DEBUG
-                else
-                    std::cerr << "[msf_core]: Map pose is forward the IMU, which can't be used to get the map!" << std::endl;
-#endif
-            } else
-            {
-                if (addMeasurement(data))
-                    applyMeasurement(data->timestamp_);
             }
         }
     }
 
-    void msf_core::inputWaypoint(const posDataPtr &data)
+    void msf_core::inputOdom(const odomDataPtr &data)
     {
-        if (isInitialized())
+        if (!isInitialized())
         {
-            if (addMeasurement(data))
-                applyMeasurement(data->timestamp_);
+            if (initial_sensor_name_ == data->name_ && initializer_->initialize(data, current_state_))
+            {
+                std::cerr << "[msf_core]: The MSF has been initialized!" << std::endl;
+                initialized_ = true;
+                state_buffer_.insert(std::pair<double, baseStatePtr>(current_state_->timestamp_, current_state_));
+                if (!odomProcessors_[data->name_]->has_init_transformation_)
+                {
+                    odomProcessors_[data->name_]->setInitTransformation(current_state_, data);
+                    if (global_sensor_name_ == data->name_)
+                        is_with_map_ = true;
+                }
+            }
+        } else
+        {
+            if (odomProcessors_[data->name_]->has_init_transformation_)
+            {
+                if (addMeasurement(data))
+                    applyMeasurement(data->timestamp_);
+            } else
+            {
+                auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
+                if (it != state_buffer_.end())
+                {
+                    if (fabs(it->first - data->timestamp_) <= 0.003)
+                    {
+                        odomProcessors_[data->name_]->setInitTransformation(it->second, data);
+                        if (global_sensor_name_ == data->name_)
+                            is_with_map_ = true;
+                    }
+#ifdef TEST_DEBUG
+                    else
+                        std::cerr
+                                << "[msf_core]: " << data->name_ << " and IMU's timestamps are not synchronized!"
+                                << std::endl;
+#endif
+                }
+            }
         }
     }
 
     baseState msf_core::outputCurrentState()
     {
-        currentState_ = (--state_buffer_.end())->second;
-        if (useMoCap_ && isWithMoCap_)
+        current_state_ = (--state_buffer_.end())->second;
+        if (is_with_map_)
         {
-            moCapProcessor_->transformStateToMap(currentState_);
-            currentState_->isWithMap_ = true;
+            switch (global_sensor_type_)
+            {
+                case Pos:
+                    break;
+                case Pose:
+                {
+                    poseProcessors_[global_sensor_name_]->transformStateToGlobal(current_state_);
+                    break;
+                }
+                case Odom:
+                {
+                    odomProcessors_[global_sensor_name_]->transformStateToGlobal(current_state_);
+                    break;
+                }
+                default:
+                    break;
+            }
+            current_state_->isWithMap_ = true;
         }
-        else if (!useMoCap_ && isWithMap_)
-        {
-            mapLocProcessor_->transformStateToMap(currentState_);
-            currentState_->isWithMap_ = true;
-        }
-        return *currentState_;
+        return *current_state_;
     }
 
 
@@ -169,35 +405,29 @@ namespace multiSensorFusion
             }
             switch (itSensor->second->type_)
             {
-                case VIO:
-                {
 #ifdef TEST_DEBUG
-                    std::cerr << "[msf_core]: VIO update!!!"
+                std::cerr << "[msf_core]: itSensor->second->name_ data update!!!"
                           << std::endl;
 #endif
-                    vioProcessor_->updateState(itState->second, std::dynamic_pointer_cast<odomData>(itSensor->second));
+                case Pos:
+                {
+                    posProcessors_[itSensor->second->name_]->update(itState->second,
+                                                                    std::dynamic_pointer_cast<posData>(
+                                                                            itSensor->second));
                     break;
                 }
-                case MapLoc:
+                case Pose:
                 {
-#ifdef TEST_DEBUG
-                    std::cerr << "[msf_core]: MapLoc update!!!"
-                          << std::endl;
-#endif
-                    mapLocProcessor_->updateState(itState->second,
-                                                  std::dynamic_pointer_cast<poseData>(itSensor->second));
+                    poseProcessors_[itSensor->second->name_]->update(itState->second,
+                                                                          std::dynamic_pointer_cast<poseData>(
+                                                                                  itSensor->second));
                     break;
                 }
-                case Waypoint:
+                case Odom:
                 {
-                    waypointProcessor_->updateState(itState->second,
-                                                    std::dynamic_pointer_cast<posData>(itSensor->second));
-                    break;
-                }
-                case MoCap:
-                {
-                    moCapProcessor_->updateState(itState->second,
-                                                 std::dynamic_pointer_cast<poseData>(itSensor->second));
+                    odomProcessors_[itSensor->second->name_]->update(itState->second,
+                                                                          std::dynamic_pointer_cast<odomData>(
+                                                                                  itSensor->second));
                     break;
                 }
                 default:
@@ -229,33 +459,9 @@ namespace multiSensorFusion
 
     void msf_core::pruneBuffer()
     {
-        while (state_buffer_.size() > max_buffer_size)
+        while (state_buffer_.size() > max_buffer_size_)
             state_buffer_.erase(state_buffer_.begin());
-        while (meas_buffer_.size() > max_buffer_size)
+        while (meas_buffer_.size() > max_buffer_size_)
             meas_buffer_.erase((meas_buffer_.begin()));
     }
-
-    void msf_core::inputMoCap(const poseDataPtr &data)
-    {
-        if (isInitialized())
-        {
-            if (!isWithMoCap_)
-            {
-                auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
-                if (it != state_buffer_.end())
-                {
-                    if (fabs(it->first - data->timestamp_) <= 0.003)
-                    {
-                        moCapProcessor_->setInitTransformation(it->second, data);
-                        isWithMoCap_ = true;
-                    }
-                }
-            } else
-            {
-                if (addMeasurement(data))
-                    applyMeasurement(data->timestamp_);
-            }
-        }
-    }
-
 }

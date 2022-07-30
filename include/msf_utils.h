@@ -13,6 +13,7 @@
 #define MULTI_SENSOR_FUSION_MSF_UTILS_H
 
 #include <iostream>
+#include <yaml-cpp/yaml.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <LocalCartesian.hpp>

@@ -25,26 +25,18 @@ namespace multiSensorFusion
     class msf_initializer
     {
     public:
-        msf_initializer();
-
-        msf_initializer(Eigen::Vector3d init_imu_p_vio, const Eigen::Quaterniond &init_imu_q_vio);
+        explicit msf_initializer(int imu_buffer_size = 100, double imu_acc_std_limit = 3.0);
 
         ~msf_initializer() = default;
 
         void addIMU(const imuDataPtr &data);
 
-        bool initializeUsingVIO(const odomDataPtr &data, baseStatePtr &currentState);
-
-        // bool initializeUsingGPS(const gpsData &data, baseState &currentState);
+        bool initialize(const baseDataPtr &data, baseStatePtr &currentState);
 
     private:
-        Eigen::Vector3d init_imu_p_vio_;
-        Eigen::Quaterniond init_imu_q_vio_;
-
         std::map<double, imuDataPtr> imu_buffer_;
-
-        const int nImuBuffer_ = 100;
-        // const double ImuAccStdLimit_ = 3.0;
+        int imu_buffer_size_;
+        double imu_acc_std_limit_;
     };
 }
 
