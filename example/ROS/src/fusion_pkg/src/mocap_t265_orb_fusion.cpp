@@ -11,6 +11,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <memory>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
@@ -20,23 +21,23 @@
 #include <Eigen/Geometry>
 #include <Eigen/Dense>
 #include "msf_core.h"
+#include "msf_utils.h"
 
 using namespace std;
 using namespace Eigen;
 
-std::string config_path = "/home/antusheng/research/map_based_localization/test/Multi_Sensor_Fusion/example/ROS/src/vio_localization_fusion/config/config.yaml";
-multiSensorFusion::msf_core fusion(config_path);
+shared_ptr<multiSensorFusion::msf_core> pFusion;
 ros::Publisher pose_pub, odom_pub, path_pub, globalPose_pub, globalOdom_pub, Tim_pub;
 nav_msgs::Path path;
 
 void publishCurrentPose()
 {
-    if(fusion.isInitialized())
+    if(pFusion->isInitialized())
     {
         geometry_msgs::PoseStamped local_pose;
         nav_msgs::Odometry local_odom;
 
-        multiSensorFusion::baseState currentState = fusion.outputCurrentState();
+        multiSensorFusion::baseState currentState = pFusion->outputCurrentState();
 
         ros::Time t = ros::Time(currentState.timestamp_);
 
@@ -104,7 +105,7 @@ void imuCallback(const sensor_msgs::ImuConstPtr &msg)
     data->acc_ << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
     data->gyro_ << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
 
-    fusion.inputIMU(data);
+    pFusion->inputIMU(data);
 
     publishCurrentPose();
 }
@@ -128,7 +129,7 @@ void t265Callback(const nav_msgs::OdometryConstPtr &msg)
     data->cov_.block<3, 3>(3, 3) = data->q_.toRotationMatrix() * data->cov_.block<3, 3>(3, 3) * data->q_.toRotationMatrix().transpose();
     data->cov_.block<3, 3>(6, 6) = 10.0 * poseCov.block<3, 3>(3, 3);
 
-    fusion.inputOdom(data);
+    pFusion->inputOdom(data);
 }
 
 void mapLocCallback(const geometry_msgs::PoseStampedConstPtr &msg)
@@ -141,27 +142,52 @@ void mapLocCallback(const geometry_msgs::PoseStampedConstPtr &msg)
     data->pos_ << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
     data->q_ = Quaterniond(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
 
-    fusion.inputPose(data);
+    pFusion->inputPose(data);
+}
+
+void moCapCallback(const geometry_msgs::PoseStampedConstPtr &msg)
+{
+    auto data = std::make_shared<multiSensorFusion::poseData>();
+
+    data->timestamp_ = msg->header.stamp.toSec();
+    data->type_ = multiSensorFusion::Pose;
+    data->name_ = "mocap";
+    data->pos_ << msg->pose.position.x, msg->pose.position.y, msg->pose.position.z;
+    data->q_ = Quaterniond(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
+
+    pFusion->inputPose(data);
 }
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "vio_localization_fusion");
-    ros::NodeHandle n("~");
+    ros::init(argc, argv, "mocap_t265_orb_fusion");
+    ros::NodeHandle nh("~");
 
-    pose_pub = n.advertise<geometry_msgs::PoseStamped>("/MSF/pose/local", 100);
-    odom_pub = n.advertise<nav_msgs::Odometry>("/MSF/odom/local", 100);
-    path_pub = n.advertise<nav_msgs::Path>("/MSF/path", 100);
-    globalPose_pub = n.advertise<geometry_msgs::PoseStamped>("/MSF/pose/global", 100);
-    globalOdom_pub = n.advertise<nav_msgs::Odometry>("/MSF/odom/global", 100);
-    Tim_pub = n.advertise<geometry_msgs::PoseStamped>("/MSF/extrinsic", 100);
+    if (argc != 2)
+    {
+        cerr << endl
+             << "Usage: rosrun fusion_pkg mocap_t265_orb_fusion path_to_config" << endl;
+        return 1;
+    }
 
-    ros::Subscriber imu_sub = n.subscribe("/d400/imu", 100, imuCallback);
-    ros::Subscriber t265_sub = n.subscribe("/t265/odom/sample", 100, t265Callback);
-    ros::Subscriber mapLoc_sub = n.subscribe("/mapLoc/pose", 10, mapLocCallback);
+    pFusion = std::make_shared<multiSensorFusion::msf_core>(argv[1]);
+
+    cout << "Use motion capture system!!!" << endl;
+
+    pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/MSF/pose/local", 100);
+    odom_pub = nh.advertise<nav_msgs::Odometry>("/MSF/odom/local", 100);
+    path_pub = nh.advertise<nav_msgs::Path>("/MSF/path", 100);
+    globalPose_pub = nh.advertise<geometry_msgs::PoseStamped>("/MSF/pose/global", 100);
+    globalOdom_pub = nh.advertise<nav_msgs::Odometry>("/MSF/odom/global", 100);
+    Tim_pub = nh.advertise<geometry_msgs::PoseStamped>("/MSF/extrinsic", 100);
+
+    ros::Subscriber imu_sub = nh.subscribe("/d400/imu", 100, imuCallback);
+    ros::Subscriber t265_sub = nh.subscribe("/camera/odom/sample30", 100, t265Callback);
+    ros::Subscriber mapLoc_sub = nh.subscribe("/mapLoc/pose", 10, mapLocCallback);
+    ros::Subscriber moCap_sub = nh.subscribe("/mocap/pose", 100, moCapCallback);
 
     ros::spin();
-
+    
     ros::shutdown();
 
     return 0;

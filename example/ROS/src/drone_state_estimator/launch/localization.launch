@@ -1,6 +1,0 @@
-<launch>
-    <node name="state_estimator" pkg="drone_state_estimator" type="state_estimator_node" >
-        <!-- <remap from="/MSF/pose/local" to="/mavros/vision_pose/pose" /> -->
-    </node>
-
-</launch>

@@ -90,8 +90,10 @@ namespace multiSensorFusion
         Eigen::MatrixXd S = H * cov_ * H.transpose() + R;
         Eigen::MatrixXd K = cov_ * H.transpose() * S.inverse();
         Eigen::MatrixXd I = Eigen::MatrixXd::Identity(12, 12);
+        // auto lastcov = cov_;
         // cov_ = (I - K * H) * cov_;
         cov_ = (I - K * H) * cov_ * (I - K * H).transpose() + K * R * K.transpose();
+        // cov_.block<6, 6>(0, 0) = lastcov.block<6, 6>(0, 0);
 
         Eigen::VectorXd delta_states = K * dz;
         body_p_sensor_ += delta_states.segment(0, 3);
@@ -167,7 +169,7 @@ namespace multiSensorFusion
 
     void msf_pose_processor::update(baseStatePtr &currentState, const poseDataPtr &data)
     {
-        updateTransformation(currentState, data);
+        // updateTransformation(currentState, data);
         updateState(currentState, data);
     }
 
