@@ -12,7 +12,7 @@
 
 #include "imuGPSFusion.h"
 
-namespace multiSensorFusion
+namespace MSF
 {
 
 /**

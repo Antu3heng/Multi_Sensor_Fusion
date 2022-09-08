@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Axes1
+        - /Path1
         - /Odometry1
       Splitter Ratio: 0.5
     Tree Height: 546
@@ -54,13 +54,6 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Class: rviz/Axes
-      Enabled: true
-      Length: 1
-      Name: Axes
-      Radius: 0.10000000149011612
-      Reference Frame: d400_link
-      Value: true
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -69,7 +62,7 @@ Visualization Manager:
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
-      Line Style: Lines
+      Line Style: Billboards
       Line Width: 0.029999999329447746
       Name: Path
       Offset:
@@ -114,7 +107,7 @@ Visualization Manager:
         Head Radius: 0.10000000149011612
         Shaft Length: 1
         Shaft Radius: 0.05000000074505806
-        Value: Arrow
+        Value: Axes
       Topic: /MSF/odom/local
       Unreliable: false
       Value: true
@@ -122,7 +115,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: t265_odom_frame
+    Fixed Frame: MSF_local_frame
     Frame Rate: 30
   Name: root
   Tools:
@@ -182,5 +175,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1250
-  X: 2011
-  Y: 309
+  X: 670
+  Y: 206

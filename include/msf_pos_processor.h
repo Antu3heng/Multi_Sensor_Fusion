@@ -18,7 +18,7 @@
 #include "msf_utils.h"
 #include "msf_type.h"
 
-namespace multiSensorFusion
+namespace MSF
 {
     class msf_pos_processor
     {
@@ -44,10 +44,11 @@ namespace multiSensorFusion
         // the transformation from position sensor's body coordinate system to MSF's body coordinate system
         Eigen::Vector3d body_p_sensor_;
         Eigen::Quaterniond body_q_sensor_;
+        Eigen::Matrix<double, 6, 6> cov_for_T_bs_;
         // the transformation from position sensor's world coordinate system to MSF's world coordinate system
         Eigen::Vector3d local_p_global_;
         Eigen::Quaterniond local_q_global_;
-        Eigen::Matrix<double, 12, 12> cov_;
+        Eigen::Matrix<double, 6, 6> cov_for_T_lg_;
 
         bool is_use_fixed_noise_ = false;
 

@@ -58,6 +58,7 @@ add_library(${PROJECT_NAME} SHARED
         src/msf_odom_processor.cpp
         src/msf_pose_processor.cpp
         src/msf_initializer.cpp
-        src/msf_pos_processor.cpp)
+        src/msf_pos_processor.cpp
+        src/msf_gps_processor.cpp)
 
 target_link_libraries(${PROJECT_NAME} libGeographiccc yaml-cpp)

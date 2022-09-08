@@ -17,7 +17,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
-namespace multiSensorFusion
+namespace MSF
 {
     enum dataType
     {
@@ -63,7 +63,8 @@ namespace multiSensorFusion
     struct odomData : public poseData
     {
         Eigen::Vector3d vel_;
-        Eigen::Matrix<double, 9, 9> cov_;
+        Eigen::Vector3d angler_vel_;
+        Eigen::Matrix<double, 12, 12> cov_;
     };
     using odomDataPtr = std::shared_ptr<odomData>;
 
@@ -87,7 +88,7 @@ namespace multiSensorFusion
 
         Eigen::Matrix<double, 18, 18> cov_;
 
-        bool isWithMap_;
+        bool has_global_state_;
         Eigen::Vector3d pos_in_global_;
         Eigen::Vector3d vel_in_global_;
         Eigen::Quaterniond q_in_global_;

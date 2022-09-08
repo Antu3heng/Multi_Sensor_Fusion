@@ -18,7 +18,7 @@
 #include <Eigen/Dense>
 #include <LocalCartesian.hpp>
 
-namespace multiSensorFusion
+namespace MSF
 {
 
     constexpr double degreeToRadian = M_PI / 180;

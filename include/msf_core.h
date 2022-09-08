@@ -27,8 +27,9 @@
 #include "msf_odom_processor.h"
 #include "msf_pose_processor.h"
 #include "msf_pos_processor.h"
+#include "msf_gps_processor.h"
 
-namespace multiSensorFusion
+namespace MSF
 {
     class msf_core
     {
@@ -49,6 +50,8 @@ namespace multiSensorFusion
 
         void inputOdom(const odomDataPtr &data);
 
+        void inputGPS(const gpsDataPtr &data);
+
         baseState outputCurrentState();
 
     private:
@@ -67,6 +70,7 @@ namespace multiSensorFusion
         std::unordered_map<std::string, std::shared_ptr<msf_pos_processor>> posProcessors_;
         std::unordered_map<std::string, std::shared_ptr<msf_pose_processor>> poseProcessors_;
         std::unordered_map<std::string, std::shared_ptr<msf_odom_processor>> odomProcessors_;
+        std::unordered_map<std::string, std::shared_ptr<msf_gps_processor>> gpsProcessors_;
 
         bool initialized_ = false;
         std::string initial_sensor_name_;
@@ -78,6 +82,8 @@ namespace multiSensorFusion
         baseStatePtr current_state_;
 
         const int max_buffer_size_ = 2000;
+
+        const double max_time_interval_ = 0.003;
 
         std::map<double, baseStatePtr> state_buffer_;
 

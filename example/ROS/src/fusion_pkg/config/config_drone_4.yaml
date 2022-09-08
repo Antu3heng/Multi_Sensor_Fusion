@@ -4,7 +4,7 @@ imu:
   acc_random_walk: 4.9098209065407837e-04
   gyr_noise_density: 2.1483047214801627e-03
   gyr_random_walk: 1.5036495212638137e-05
-  initializer_buffer_size: 100
+  initializer_buffer_size: 200
   initializer_max_acc_std: 3.0
 
 #pos_sensor:
@@ -28,8 +28,8 @@ pose_sensor:
     use_for_global: 0
   sensor2:
     name: "mocap"
-    body_T_sensor: [ -0.0618112, -0.0178466, 0.105516, 0.0051576, -0.0028813, -0.0006538, 0.9999823 ]
-    # local_T_global: [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0 ]
+    # body_T_sensor: [ -0.0618112, -0.0178466, 0.105516, 0.0051576, -0.0028813, -0.0006538, 0.9999823 ]
+    body_T_sensor: [ -0.0618112, -0.0178466, 0.105516, 0.0, 0.0, 0.0, 1.0 ]
     input_with_cov: 0
     n_pos: 0.01
     n_q: 0.1
@@ -40,7 +40,7 @@ odom_sensor:
   quantity: 1
   sensor1:
     name: "t265"
-    body_T_sensor: [ -0.17, 0.0, 0.0, -0.3826545, 0.0, 0.9238915, 0.0 ]
+    body_T_sensor: [ -0.215312, -0.0283489, -0.00516569, -0.4102224, 0.0084562, 0.9119264, -0.0060364 ]
     input_with_cov: 1
     use_for_initial: 1
     use_for_global: 0

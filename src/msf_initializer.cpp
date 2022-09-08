@@ -13,7 +13,7 @@
 
 #include <utility>
 
-namespace multiSensorFusion
+namespace MSF
 {
     msf_initializer::msf_initializer(int imu_buffer_size, double imu_acc_std_limit)
             : imu_buffer_size_(imu_buffer_size), imu_acc_std_limit_(imu_acc_std_limit)
@@ -84,7 +84,7 @@ namespace multiSensorFusion
                 currentState->cov_.block<3, 3>(12, 12) = Eigen::Matrix3d::Identity() * 0.02 * 0.02;
                 currentState->cov_.block<3, 3>(15, 15) = Eigen::Matrix3d::Identity() * 0.01 * 0.01;
 
-                currentState->isWithMap_ = false;
+                currentState->has_global_state_ = false;
 
                 return true;
             }

@@ -14,7 +14,7 @@
 
 #include <utility>
 
-namespace multiSensorFusion
+namespace MSF
 {
 
 /**

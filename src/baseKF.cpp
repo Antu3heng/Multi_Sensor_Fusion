@@ -12,7 +12,7 @@
 
 #include "baseKF.h"
 
-namespace multiSensorFusion
+namespace MSF
 {
 
 baseKF::baseKF(int nStates)

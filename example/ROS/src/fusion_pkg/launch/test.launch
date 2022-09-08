@@ -1,21 +1,9 @@
 <launch>
 
-  <!-- Launch vio_t265_fusion node -->
-  <!-- <node pkg="vio_localization_fusion" type="t265_localization_fusion_node" name="t265_localization_fusion"
-        output="screen"/> -->
+  <node pkg="nmea_navsat_driver" type="nmea_topic_driver" name="nmea_topic_driver" output="screen"/>
 
-  <node pkg="vio_localization_fusion" type="t265_fusion_new_node" name="t265_localization_fusion"
-        output="screen"/>
+  <node pkg="fusion_pkg" type="imu_gps_fusion_node" name="imu_gps_fusion" output="screen" args="$(find fusion_pkg)/config/ubtm_0719.yaml"/>
 
-  <!-- Launch map-based localization node
-  <include file="$(find visual_localization)/launch/test.launch" >
-  </include> -->
-
-  <!-- Throttle T265 messages to a fixed rate around 30Hz -->
-  <node pkg="topic_tools" type="throttle" name="throttle_t265"
-        args="messages /t265/odom/sample 30 /t265/odom/sample30" 
-        output="log"/>
-
-  <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find vio_localization_fusion)/fusion_rviz.rviz" />
+  <node name="rvizvisualisation" pkg="rviz" type="rviz" output="log" args="-d $(find fusion_pkg)/fusion_rviz.rviz" />
 
 </launch>

@@ -44,3 +44,11 @@ target_link_libraries(mocap_t265_orb_fusion_node
   ${catkin_LIBRARIES}
   ${LIBS}
 )
+
+add_executable(imu_gps_fusion_node
+src/imu_gps_fusion.cpp)
+
+target_link_libraries(imu_gps_fusion_node
+  ${catkin_LIBRARIES}
+  ${LIBS}
+)

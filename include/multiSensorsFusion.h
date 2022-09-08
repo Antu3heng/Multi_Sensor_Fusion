@@ -24,7 +24,7 @@
 using namespace std;
 using namespace Eigen;
 
-namespace multiSensorFusion
+namespace MSF
 {
 
 enum msgType {vioMsg, mapPoseMsg};

@@ -11,7 +11,7 @@
 
 #include "msf_core.h"
 
-namespace multiSensorFusion
+namespace MSF
 {
     msf_core::msf_core(const std::string &config_file_path)
     {
@@ -205,6 +205,46 @@ namespace multiSensorFusion
             }
         }
 
+        if (config["gps_sensor"])
+        {
+            int num_gps_sensor = config["gps_sensor"]["quantity"].as<int>();
+            for (int i = 1; i <= num_gps_sensor; i++)
+            {
+                std::string sensor_idx = "sensor" + std::to_string(i);
+
+                auto vec_body_T_sensor = config["gps_sensor"][sensor_idx]["body_T_sensor"].as<std::vector<double>>();
+                auto body_p_sensor = Eigen::Vector3d(vec_body_T_sensor[0], vec_body_T_sensor[1], vec_body_T_sensor[2]);
+                auto body_q_sensor = Eigen::Quaterniond(vec_body_T_sensor[6], vec_body_T_sensor[3],
+                                                        vec_body_T_sensor[4], vec_body_T_sensor[5]);
+
+                auto gps_processor = std::make_shared<msf_gps_processor>(body_p_sensor, body_q_sensor);
+                if (!config["gps_sensor"][sensor_idx]["input_with_cov"].as<int>())
+                {
+                    auto n_pos = config["gps_sensor"][sensor_idx]["n_pos"].as<double>();
+                    gps_processor->fixNoise(n_pos);
+                }
+                std::string sensor_name = config["gps_sensor"][sensor_idx]["name"].as<std::string>();
+                gpsProcessors_[sensor_name] = gps_processor;
+
+                if (config["gps_sensor"][sensor_idx]["use_for_initial"].as<int>())
+                {
+                    initial_sensor_name_ = sensor_name;
+                }
+
+                if (config["gps_sensor"][sensor_idx]["use_for_global"].as<int>())
+                {
+                    if (!global_sensor_name_.empty())
+                    {
+                        std::cerr << "More than one sensor used for global!" << std::endl;
+                        exit(-1);
+                    }
+                    global_sensor_type_ = GPS;
+                    global_sensor_name_ = sensor_name;
+                    is_with_map_ = true;
+                }
+            }
+        }
+
         current_state_ = std::make_shared<baseState>();
     }
 
@@ -217,14 +257,6 @@ namespace multiSensorFusion
     {
         data->acc_ = body_q_imu_ * data->acc_;
         data->gyro_ = body_q_imu_ * data->gyro_;
-
-#ifdef TEST_DEBUG
-        std::cout << "======================================" << std::endl;
-        std::cout << "state buffer size: " << state_buffer_.size() << std::endl;
-        std::cout << "measurement buffer size: " << meas_buffer_.size() << std::endl;
-        std::cout << "future measurement buffer size: " << futureMeas_buffer_.size() << std::endl;
-        std::cout << std::endl;
-#endif
 
         if (!isInitialized())
         {
@@ -274,10 +306,10 @@ namespace multiSensorFusion
                     applyMeasurement(data->timestamp_);
             } else
             {
-                auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
+                auto it = state_buffer_.lower_bound(data->timestamp_ - max_time_interval_);
                 if (it != state_buffer_.end())
                 {
-                    if (fabs(it->first - data->timestamp_) <= 0.003)
+                    if (fabs(it->first - data->timestamp_) <= max_time_interval_)
                     {
                         poseProcessors_[data->name_]->setInitTransformation(it->second, data);
                         if (global_sensor_name_ == data->name_)
@@ -318,10 +350,10 @@ namespace multiSensorFusion
                     applyMeasurement(data->timestamp_);
             } else
             {
-                auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
+                auto it = state_buffer_.lower_bound(data->timestamp_ - max_time_interval_);
                 if (it != state_buffer_.end())
                 {
-                    if (fabs(it->first - data->timestamp_) <= 0.003)
+                    if (fabs(it->first - data->timestamp_) <= max_time_interval_)
                     {
                         odomProcessors_[data->name_]->setInitTransformation(it->second, data);
                         if (global_sensor_name_ == data->name_)
@@ -338,6 +370,44 @@ namespace multiSensorFusion
         }
     }
 
+    void msf_core::inputGPS(const gpsDataPtr &data)
+    {
+        if (!isInitialized())
+        {
+            if (initial_sensor_name_ == data->name_ && initializer_->initialize(data, current_state_))
+            {
+                std::cerr << "[msf_core]: The MSF has been initialized!" << std::endl;
+                initialized_ = true;
+                state_buffer_.insert(std::pair<double, baseStatePtr>(current_state_->timestamp_, current_state_));
+                if (!gpsProcessors_[data->name_]->has_init_transformation_)
+                {
+                    gpsProcessors_[data->name_]->setInitTransformation(current_state_, data);
+                    if (global_sensor_name_ == data->name_)
+                        is_with_map_ = true;
+                }
+            }
+        } else
+        {
+            if (gpsProcessors_[data->name_]->has_init_transformation_)
+            {
+                if (addMeasurement(data))
+                    applyMeasurement(data->timestamp_);
+            } else
+            {
+                auto it = state_buffer_.lower_bound(data->timestamp_ - max_time_interval_);
+                if (it != state_buffer_.end())
+                {
+                    if (fabs(it->first - data->timestamp_) <= max_time_interval_)
+                    {
+                        gpsProcessors_[data->name_]->setInitTransformation(it->second, data);
+                        if (global_sensor_name_ == data->name_)
+                            is_with_map_ = true;
+                    }
+                }
+            }
+        }
+    }
+
     baseState msf_core::outputCurrentState()
     {
         current_state_ = (--state_buffer_.end())->second;
@@ -346,7 +416,10 @@ namespace multiSensorFusion
             switch (global_sensor_type_)
             {
                 case Pos:
+                {
+                    posProcessors_[global_sensor_name_]->transformStateToGlobal(current_state_);
                     break;
+                }
                 case Pose:
                 {
                     poseProcessors_[global_sensor_name_]->transformStateToGlobal(current_state_);
@@ -357,10 +430,15 @@ namespace multiSensorFusion
                     odomProcessors_[global_sensor_name_]->transformStateToGlobal(current_state_);
                     break;
                 }
+                case GPS:
+                {
+                    gpsProcessors_[global_sensor_name_]->transformStateToGlobal(current_state_);
+                    break;
+                }
                 default:
                     break;
             }
-            current_state_->isWithMap_ = true;
+            current_state_->has_global_state_ = true;
         }
         return *current_state_;
     }
@@ -368,7 +446,7 @@ namespace multiSensorFusion
 
     bool msf_core::addMeasurement(const baseDataPtr &data)
     {
-        auto it = state_buffer_.lower_bound(data->timestamp_ - 0.003);
+        auto it = state_buffer_.lower_bound(data->timestamp_ - max_time_interval_);
         if (it == state_buffer_.end())
         {
 #ifdef TEST_DEBUG
@@ -378,7 +456,7 @@ namespace multiSensorFusion
             return false;
         } else
         {
-            if (fabs(it->first - data->timestamp_) <= 0.003)
+            if (fabs(it->first - data->timestamp_) <= max_time_interval_)
             {
                 meas_buffer_.insert(std::pair<double, baseDataPtr>(data->timestamp_, data));
                 return true;
@@ -395,20 +473,16 @@ namespace multiSensorFusion
 
     void msf_core::applyMeasurement(const double &timestamp)
     {
-        auto itState = state_buffer_.lower_bound(timestamp - 0.003);
+        auto itState = state_buffer_.lower_bound(timestamp - max_time_interval_);
         for (auto itSensor = meas_buffer_.find(timestamp); itSensor != meas_buffer_.end(); ++itSensor)
         {
-            while (itState != state_buffer_.lower_bound(itSensor->first - 0.003))
+            while (itState != state_buffer_.lower_bound(itSensor->first - max_time_interval_))
             {
                 auto itLastState = itState;
                 imuProcessor_->predict(itLastState->second, (++itState)->second);
             }
             switch (itSensor->second->type_)
             {
-#ifdef TEST_DEBUG
-                std::cerr << "[msf_core]: itSensor->second->name_ data update!!!"
-                          << std::endl;
-#endif
                 case Pos:
                 {
                     posProcessors_[itSensor->second->name_]->update(itState->second,
@@ -430,9 +504,20 @@ namespace multiSensorFusion
                                                                                   itSensor->second));
                     break;
                 }
+                case GPS:
+                {
+                    gpsProcessors_[itSensor->second->name_]->update(itState->second,
+                                                                    std::dynamic_pointer_cast<gpsData>(
+                                                                            itSensor->second));
+                    break;
+                }
                 default:
                     break;
             }
+#ifdef TEST_DEBUG
+            std::cerr << "[msf_core]: use " << itSensor->second->name_ << " data update!!!"
+                          << std::endl;
+#endif
         }
         while (itState != (--state_buffer_.end()))
         {
@@ -443,18 +528,27 @@ namespace multiSensorFusion
 
     void msf_core::checkFutureMeasurement()
     {
+        double timestamp;
+        bool has_available_meas = false;
         for (auto it = futureMeas_buffer_.begin(); it != futureMeas_buffer_.end();)
         {
-            auto itState = state_buffer_.lower_bound(it->first - 0.003);
+            auto itState = state_buffer_.lower_bound(it->first - max_time_interval_);
             if (itState == state_buffer_.end())
                 break;
             else
             {
-                if (fabs(it->first - itState->first) <= 0.003)
+                if (!has_available_meas)
+                {
+                    has_available_meas = true;
+                    timestamp = it->first;
+                }
+                if (fabs(it->first - itState->first) <= max_time_interval_)
                     meas_buffer_.insert(*it);
                 it = futureMeas_buffer_.erase(it);
             }
         }
+        if (has_available_meas)
+            applyMeasurement(timestamp);
     }
 
     void msf_core::pruneBuffer()

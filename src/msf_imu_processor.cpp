@@ -11,7 +11,7 @@
 
 #include "msf_imu_processor.h"
 
-namespace multiSensorFusion
+namespace MSF
 {
     msf_imu_processor::msf_imu_processor(const double &n_a, const double &n_w, const double &n_ba, const double &n_bw)
             : n_a_(n_a), n_w_(n_w), n_ba_(n_ba), n_bw_(n_bw)
@@ -70,15 +70,15 @@ namespace multiSensorFusion
         Eigen::MatrixXd Fi = Eigen::MatrixXd::Zero(18, 12);
         Fi.block<12, 12>(3, 0) = Eigen::MatrixXd::Identity(12, 12);
         Eigen::MatrixXd Qi = Eigen::MatrixXd::Zero(12, 12);
-        // Qi.block<3, 3>(0, 0) = Matrix3d::Identity() * n_a_ * n_a_ * dt * dt;
-        // Qi.block<3, 3>(3, 3) = Matrix3d::Identity() * n_w_ * n_w_ * dt * dt;
-        Qi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * n_a_ * n_a_ * dt;
-        Qi.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * n_w_ * n_w_ * dt;
+        Qi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * n_a_ * n_a_ * dt * dt;
+        Qi.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * n_w_ * n_w_ * dt * dt;
+        // Qi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * n_a_ * n_a_ * dt;
+        // Qi.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * n_w_ * n_w_ * dt;
         // TODO: still have some confusion on random walk parameters
-        // Qi.block<3, 3>(6, 6) = Matrix3d::Identity() * n_ba_ * n_ba_ * dt;
-        // Qi.block<3, 3>(9, 9) = Matrix3d::Identity() * n_bw_ * n_bw_ * dt;
-        Qi.block<3, 3>(6, 6) = Eigen::Matrix3d::Identity() * n_ba_ * n_ba_;
-        Qi.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity() * n_bw_ * n_bw_;
+        Qi.block<3, 3>(6, 6) = Eigen::Matrix3d::Identity() * n_ba_ * n_ba_ * dt;
+        Qi.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity() * n_bw_ * n_bw_ * dt;
+        // Qi.block<3, 3>(6, 6) = Eigen::Matrix3d::Identity() * n_ba_ * n_ba_;
+        // Qi.block<3, 3>(9, 9) = Eigen::Matrix3d::Identity() * n_bw_ * n_bw_;
         Eigen::MatrixXd Q = Fi * Qi * Fi.transpose();
         currentState->cov_ = F * lastState->cov_ * F.transpose() + Q;
         currentState->cov_ = (currentState->cov_ + currentState->cov_.transpose()) / 2.0;

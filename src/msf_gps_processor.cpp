@@ -1,48 +1,51 @@
-/**
- * @file msf_waypoint_processor.cpp
- * @author Xinjiang Wang (wangxj83@sjtu.edu.cn)
- * @brief the header of msf_imu_processor.cpp
- * @version 0.1
- * @date 2021-10-25
- *
- * @copyright Copyright (c) 2021
- *
- */
+//
+// Created by antusheng on 9/4/22.
+//
 
-#include "msf_pos_processor.h"
+#include "msf_gps_processor.h"
 
 #include <utility>
 
 namespace MSF
 {
-    msf_pos_processor::msf_pos_processor(Eigen::Vector3d body_p_sensor, const Eigen::Quaterniond &body_q_sensor,
-                                         Eigen::Vector3d local_p_global, const Eigen::Quaterniond &local_q_global)
-            : body_p_sensor_(std::move(body_p_sensor)), body_q_sensor_(body_q_sensor),
-              local_p_global_(std::move(local_p_global)), local_q_global_(local_q_global)
+    msf_gps_processor::msf_gps_processor(Eigen::Vector3d body_p_sensor, const Eigen::Quaterniond &body_q_sensor)
+            : body_p_sensor_(std::move(body_p_sensor)), body_q_sensor_(body_q_sensor)
     {
         is_use_fixed_noise_ = false;
-        cov_for_T_bs_.block<3, 3>(0, 0) = cov_for_T_lg_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.1 * 0.1;
-        cov_for_T_bs_.block<3, 3>(3, 3) = cov_for_T_lg_.block<3, 3>(3, 3) =
-                Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
+        has_init_transformation_ = false;
+        cov_for_T_bs_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.1 * 0.1;
+        cov_for_T_bs_.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
+        cov_for_T_lg_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 10.0 * 10.0;
+        cov_for_T_lg_.block<2, 2>(3, 3) = Eigen::Matrix2d::Identity() * 10.0 * degreeToRadian * 10.0 * degreeToRadian;
+        cov_for_T_lg_(5, 5) = 100.0 * degreeToRadian * 100.0 * degreeToRadian;
     }
 
-    void msf_pos_processor::fixNoise(double n_pos)
+    void msf_gps_processor::fixNoise(double n_pos)
     {
         is_use_fixed_noise_ = true;
         n_pos_ = n_pos;
     }
 
-    void msf_pos_processor::updateTransformation(baseStatePtr &currentState, const posDataPtr &data)
+    void msf_gps_processor::setInitTransformation(const baseStatePtr &state, const gpsDataPtr &data)
+    {
+        has_init_transformation_ = true;
+        init_lla_ = data->lla_;
+        local_p_global_ = state->pos_;
+        local_q_global_ = Eigen::Quaterniond::Identity();
+    }
+
+    void msf_gps_processor::updateTransformation(baseStatePtr &currentState, const gpsDataPtr &data)
     {
         // update the transformation state
+        Eigen::Vector3d pos = convertLlaToENU(init_lla_, data->lla_);
         // residuals
         Eigen::Vector3d dz = currentState->pos_ -
-                             (local_q_global_ * data->pos_ + local_p_global_ - currentState->q_ * body_p_sensor_);
+                             (local_q_global_ * pos + local_p_global_ - currentState->q_ * body_p_sensor_);
 
         // Matrix H
         Eigen::MatrixXd H = Eigen::MatrixXd::Zero(3, 6);
         H.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
-        H.block<3, 3>(0, 3) = -local_q_global_.toRotationMatrix() * skew_symmetric(data->pos_);
+        H.block<3, 3>(0, 3) = -local_q_global_.toRotationMatrix() * skew_symmetric(pos);
 
         // Matrix R
         Eigen::Matrix3d R = currentState->cov_.block<3, 3>(0, 0);
@@ -67,20 +70,25 @@ namespace MSF
         cov_for_T_lg_ = (cov_for_T_lg_ + cov_for_T_lg_.transpose()) / 2.0;
     }
 
-    void msf_pos_processor::updateState(baseStatePtr &currentState, const posDataPtr &data)
+    void msf_gps_processor::updateState(baseStatePtr &currentState, const gpsDataPtr &data)
     {
         // update the Multi-sensor fusion state
+        Eigen::Vector3d pos = convertLlaToENU(init_lla_, data->lla_);
         // residuals
-        Eigen::Vector3d dz = data->pos_ - local_q_global_.conjugate() *
-                                          (currentState->q_ * body_p_sensor_ + currentState->pos_ - local_p_global_);
+        // Eigen::Vector3d dz = pos - local_q_global_.conjugate() *
+        //                                   (currentState->q_ * body_p_sensor_ + currentState->pos_ - local_p_global_);
 
         // update the covariance and the error state
         // Matrix H
+        // Eigen::MatrixXd H = Eigen::MatrixXd::Zero(3, 24);
+        // H.block<3, 3>(0, 0) = local_q_global_.conjugate().toRotationMatrix();
+        // H.block<3, 3>(0, 6) = -local_q_global_.conjugate().toRotationMatrix() * currentState->q_.toRotationMatrix() *
+        //                       skew_symmetric(body_p_sensor_);
+        // H.block<3, 3>(0, 18) = local_q_global_.conjugate().toRotationMatrix() * currentState->q_.toRotationMatrix();
+
+        Eigen::Vector3d dz = pos - currentState->pos_;
         Eigen::MatrixXd H = Eigen::MatrixXd::Zero(3, 24);
-        H.block<3, 3>(0, 0) = local_q_global_.conjugate().toRotationMatrix();
-        H.block<3, 3>(0, 6) = -local_q_global_.conjugate().toRotationMatrix() * currentState->q_.toRotationMatrix() *
-                              skew_symmetric(body_p_sensor_);
-        H.block<3, 3>(0, 18) = local_q_global_.conjugate().toRotationMatrix() * currentState->q_.toRotationMatrix();
+        H.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
 
         // Matrix R
         Eigen::Matrix3d R;
@@ -124,13 +132,13 @@ namespace MSF
         cov_for_T_bs_ = cov.block<6, 6>(18, 18);
     }
 
-    void msf_pos_processor::update(baseStatePtr &currentState, const posDataPtr &data)
+    void msf_gps_processor::update(baseStatePtr &currentState, const gpsDataPtr &data)
     {
-        updateTransformation(currentState, data);
+        // updateTransformation(currentState, data);
         updateState(currentState, data);
     }
 
-    void msf_pos_processor::transformStateToGlobal(baseStatePtr &state)
+    void msf_gps_processor::transformStateToGlobal(baseStatePtr &state)
     {
         state->pos_in_global_ = local_q_global_.conjugate() * (state->pos_ - local_p_global_);
         state->vel_in_global_ = local_q_global_.conjugate() * state->vel_;

@@ -20,7 +20,7 @@
 #include "msf_utils.h"
 #include "msf_type.h"
 
-namespace multiSensorFusion
+namespace MSF
 {
     class msf_initializer
     {

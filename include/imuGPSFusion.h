@@ -23,7 +23,7 @@
 using namespace std;
 using namespace Eigen;
 
-namespace multiSensorFusion
+namespace MSF
 {
 struct imuGPSFusionStates
 {
