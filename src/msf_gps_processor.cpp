@@ -75,20 +75,20 @@ namespace MSF
         // update the Multi-sensor fusion state
         Eigen::Vector3d pos = convertLlaToENU(init_lla_, data->lla_);
         // residuals
-        // Eigen::Vector3d dz = pos - local_q_global_.conjugate() *
-        //                                   (currentState->q_ * body_p_sensor_ + currentState->pos_ - local_p_global_);
+        Eigen::Vector3d dz = pos - local_q_global_.conjugate() *
+                                          (currentState->q_ * body_p_sensor_ + currentState->pos_ - local_p_global_);
 
         // update the covariance and the error state
         // Matrix H
-        // Eigen::MatrixXd H = Eigen::MatrixXd::Zero(3, 24);
-        // H.block<3, 3>(0, 0) = local_q_global_.conjugate().toRotationMatrix();
-        // H.block<3, 3>(0, 6) = -local_q_global_.conjugate().toRotationMatrix() * currentState->q_.toRotationMatrix() *
-        //                       skew_symmetric(body_p_sensor_);
-        // H.block<3, 3>(0, 18) = local_q_global_.conjugate().toRotationMatrix() * currentState->q_.toRotationMatrix();
-
-        Eigen::Vector3d dz = pos - currentState->pos_;
         Eigen::MatrixXd H = Eigen::MatrixXd::Zero(3, 24);
-        H.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
+        H.block<3, 3>(0, 0) = local_q_global_.conjugate().toRotationMatrix();
+        H.block<3, 3>(0, 6) = -local_q_global_.conjugate().toRotationMatrix() * currentState->q_.toRotationMatrix() *
+                              skew_symmetric(body_p_sensor_);
+        H.block<3, 3>(0, 18) = local_q_global_.conjugate().toRotationMatrix() * currentState->q_.toRotationMatrix();
+
+        // Eigen::Vector3d dz = pos - currentState->pos_;
+        // Eigen::MatrixXd H = Eigen::MatrixXd::Zero(3, 24);
+        // H.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
 
         // Matrix R
         Eigen::Matrix3d R;
@@ -134,7 +134,7 @@ namespace MSF
 
     void msf_gps_processor::update(baseStatePtr &currentState, const gpsDataPtr &data)
     {
-        // updateTransformation(currentState, data);
+        updateTransformation(currentState, data);
         updateState(currentState, data);
     }
 

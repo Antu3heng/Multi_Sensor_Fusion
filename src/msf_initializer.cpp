@@ -42,7 +42,7 @@ namespace MSF
             if (fabs(it->first - data->timestamp_) > 0.003)
             {
 #ifdef TEST_DEBUG
-                std::cerr << "[msf_initializer]: IMU and the input data are not synchronized!" << std::endl;
+                std::cerr << "[msf_initializer]: IMU and the input data are not synchronized! Time interval: " << fabs(it->first - data->timestamp_) << std::endl;
 #endif
                 return false;
             } else

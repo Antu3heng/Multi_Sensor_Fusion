@@ -84,15 +84,6 @@ void publishCurrentPose()
         local_odom.twist.twist.linear.y = currentState.vel_[1];
         local_odom.twist.twist.linear.z = currentState.vel_[2];
 
-        // cout << "p: " << currentState.pos_.transpose() << endl;
-        // cout << "v: " << currentState.vel_.transpose() << endl;
-        // cout << "q: " << currentState.q_.coeffs().transpose() << endl;
-        // cout << "ba: " << currentState.ba_.transpose() << endl;
-        // cout << "bw: " << currentState.bw_.transpose() << endl;
-        // cout << "g: " << currentState.g_.transpose() << endl;
-        // cout << "cov: " << currentState.cov_ << endl;
-        cout << endl;
-
         pose_pub.publish(local_pose);
         odom_pub.publish(local_odom);
 
@@ -114,28 +105,26 @@ void imuCallback(const sensor_msgs::ImuConstPtr &msg)
 
     pFusion->inputIMU(data);
 
-    // publishCurrentPose();
+    publishCurrentPose();
 }
 
 void gpsCallback(const sensor_msgs::NavSatFixConstPtr &msg)
 {
-    if(msg->status.status != 2)
-    {
-        cout << " Bad GPS message!" << endl;
-        return;
-    }
+    // if(msg->status.status != 2)
+    // {
+    //     cout << " Bad GPS message!" << endl;
+    //     return;
+    // }
 
     auto data = std::make_shared<MSF::gpsData>();
 
-    data->timestamp_ = msg->header.stamp.toSec();
+    data->timestamp_ = msg->header.stamp.toSec() - 18.0;
     data->name_ = "gps";
     data->type_ = MSF::GPS;
     data->lla_ << msg->latitude, msg->longitude, msg->altitude;
     data->cov_ = Eigen::Map<const Eigen::Matrix3d>(msg->position_covariance.data());
 
     pFusion->inputGPS(data);
-
-    publishCurrentPose();
 }
 
 int main(int argc, char **argv)
@@ -159,8 +148,8 @@ int main(int argc, char **argv)
     globalOdom_pub = nh.advertise<nav_msgs::Odometry>("/MSF/odom/global", 100);
     Tim_pub = nh.advertise<geometry_msgs::PoseStamped>("/MSF/extrinsic", 100);
 
-    ros::Subscriber imu_sub = nh.subscribe("/imu/data", 100, imuCallback);
-    ros::Subscriber gps_sub = nh.subscribe("/fix", 10, gpsCallback);
+    ros::Subscriber imu_sub = nh.subscribe("/imu0", 100, imuCallback);
+    ros::Subscriber gps_sub = nh.subscribe("/ublox_driver/receiver_lla", 10, gpsCallback);
 
     ros::spin();
     

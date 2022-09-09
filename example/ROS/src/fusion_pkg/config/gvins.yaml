@@ -1,9 +1,9 @@
 imu:
   body_q_imu: [0.0, 0.0, 0.0, 1.0] # [q]
-  acc_noise_density: 1e-2
-  acc_random_walk: 1e-4
-  gyr_noise_density: 2e-3
-  gyr_random_walk: 1e-5
+  acc_noise_density: 0.08
+  acc_random_walk: 0.00004
+  gyr_noise_density: 0.004
+  gyr_random_walk: 2.0e-6
   initializer_buffer_size: 200
   initializer_max_acc_std: 3.0
 
@@ -12,6 +12,7 @@ gps_sensor:
   sensor1:
     name: "gps"
     body_T_sensor: [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0 ]
-    input_with_cov: 1
+    input_with_cov: 0
+    n_pos: 0.5
     use_for_initial: 1
     use_for_global: 1
