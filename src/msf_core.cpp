@@ -43,6 +43,13 @@ namespace MSF
         auto initializer_buffer_size = config["imu"]["initializer_buffer_size"].as<int>();
         auto initializer_max_acc_std = config["imu"]["initializer_max_acc_std"].as<double>();
         initializer_ = std::make_shared<msf_initializer>(initializer_buffer_size, initializer_max_acc_std);
+        if (config["imu"]["use_ned_as_world_frame"] && config["imu"]["use_ned_as_world_frame"].as<int>())
+            initializer_->setWorldFrameAsNED();
+        if (config["imu"]["gravity_norm"])
+        {
+            auto gravity_norm = config["imu"]["gravity_norm"].as<double>();
+            initializer_->setGravityNorm(gravity_norm);
+        }
 
         if (config["pos_sensor"])
         {
@@ -68,7 +75,8 @@ namespace MSF
                 auto local_q_global = Eigen::Quaterniond(vec_local_T_global[6], vec_local_T_global[3],
                                                          vec_local_T_global[4], vec_local_T_global[5]);
 
-                auto pos_processor = std::make_shared<msf_pos_processor>(body_p_sensor, body_q_sensor, local_p_global,local_q_global);
+                auto pos_processor = std::make_shared<msf_pos_processor>(body_p_sensor, body_q_sensor, local_p_global,
+                                                                         local_q_global);
                 if (!config["pos_sensor"][sensor_idx]["input_with_cov"].as<int>())
                 {
                     auto n_pos = config["pos_sensor"][sensor_idx]["n_pos"].as<double>();
@@ -118,7 +126,8 @@ namespace MSF
                                                           vec_local_T_global[2]);
                     auto local_q_global = Eigen::Quaterniond(vec_local_T_global[6], vec_local_T_global[3],
                                                              vec_local_T_global[4], vec_local_T_global[5]);
-                    pose_processor = std::make_shared<msf_pose_processor>(body_p_sensor, body_q_sensor, local_p_global, local_q_global);
+                    pose_processor = std::make_shared<msf_pose_processor>(body_p_sensor, body_q_sensor, local_p_global,
+                                                                          local_q_global);
                 } else
                     pose_processor = std::make_shared<msf_pose_processor>(body_p_sensor, body_q_sensor);
                 if (!config["pose_sensor"][sensor_idx]["input_with_cov"].as<int>())
@@ -172,14 +181,15 @@ namespace MSF
                                                           vec_local_T_global[2]);
                     auto local_q_global = Eigen::Quaterniond(vec_local_T_global[6], vec_local_T_global[3],
                                                              vec_local_T_global[4], vec_local_T_global[5]);
-                    odom_processor = std::make_shared<msf_odom_processor>(body_p_sensor, body_q_sensor, local_p_global, local_q_global);
+                    odom_processor = std::make_shared<msf_odom_processor>(body_p_sensor, body_q_sensor, local_p_global,
+                                                                          local_q_global);
                 } else
                     odom_processor = std::make_shared<msf_odom_processor>(body_p_sensor, body_q_sensor);
                 if (!config["odom_sensor"][sensor_idx]["input_with_cov"].as<int>())
                 {
                     auto n_pos = config["odom_sensor"][sensor_idx]["n_pos"].as<double>();
                     auto n_q = config["odom_sensor"][sensor_idx]["n_q"].as<double>();
-                    auto  n_v = config["odom_sensor"][sensor_idx]["n_v"].as<double>();
+                    auto n_v = config["odom_sensor"][sensor_idx]["n_v"].as<double>();
                     odom_processor->fixNoise(n_pos, n_q, n_v);
                 }
                 std::string sensor_name = config["odom_sensor"][sensor_idx]["name"].as<std::string>();
@@ -493,15 +503,15 @@ namespace MSF
                 case Pose:
                 {
                     poseProcessors_[itSensor->second->name_]->update(itState->second,
-                                                                          std::dynamic_pointer_cast<poseData>(
-                                                                                  itSensor->second));
+                                                                     std::dynamic_pointer_cast<poseData>(
+                                                                             itSensor->second));
                     break;
                 }
                 case Odom:
                 {
                     odomProcessors_[itSensor->second->name_]->update(itState->second,
-                                                                          std::dynamic_pointer_cast<odomData>(
-                                                                                  itSensor->second));
+                                                                     std::dynamic_pointer_cast<odomData>(
+                                                                             itSensor->second));
                     break;
                 }
                 case GPS:

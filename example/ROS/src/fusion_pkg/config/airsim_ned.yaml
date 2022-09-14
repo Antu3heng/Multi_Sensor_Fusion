@@ -1,0 +1,23 @@
+# body frame: ned, world frame: ned
+
+imu:
+  body_q_imu: [ 0, 0, 0, 1 ] # [q]
+  acc_noise_density: 0.08
+  acc_random_walk: 0.00004
+  gyr_noise_density: 0.004
+  gyr_random_walk: 2.0e-6
+  initializer_buffer_size: 100
+  initializer_max_acc_std: 3.0
+  use_ned_as_world_frame: 1
+  gravity_norm: 9.807
+
+pose_sensor:
+  quantity: 1
+  sensor1:
+    name: "orbslam"
+    body_T_sensor: [ 0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 0.5 ] # [p, q]
+    input_with_cov: 0
+    n_pos: 0.1
+    n_q: 1
+    use_for_initial: 1
+    use_for_global: 1 

@@ -19,6 +19,16 @@ namespace MSF
             : imu_buffer_size_(imu_buffer_size), imu_acc_std_limit_(imu_acc_std_limit)
     {}
 
+    void msf_initializer::setWorldFrameAsNED()
+    {
+        use_ned_frame_ = true;
+    }
+
+    void msf_initializer::setGravityNorm(double gravity_norm)
+    {
+        gravity_norm_ = gravity_norm;
+    }
+
     void msf_initializer::addIMU(const imuDataPtr &data)
     {
         imu_buffer_.insert(std::pair<double, imuDataPtr>(data->timestamp_, data));
@@ -65,17 +75,24 @@ namespace MSF
                 currentState->timestamp_ = it->first;
                 currentState->imu_data_ = it->second;
                 currentState->pos_ = currentState->vel_ = currentState->ba_ = currentState->bw_ = Eigen::Vector3d::Zero();
-                currentState->g_ = Eigen::Vector3d(0., 0., -1) * mean_acc.norm();
+                if (gravity_norm_ == -1.0)
+                    gravity_norm_ = mean_acc.norm();
+                currentState->g_ = Eigen::Vector3d(0., 0., -1) * gravity_norm_;
                 Eigen::Vector3d z_axis = mean_acc.normalized();
+                if (use_ned_frame_)
+                {
+                    currentState->g_ *= -1.0;
+                    z_axis *= -1.0;
+                }
                 Eigen::Vector3d x_axis = (Eigen::Vector3d::UnitX() -
                                           z_axis * z_axis.transpose() * Eigen::Vector3d::UnitX()).normalized();
                 Eigen::Vector3d y_axis = (z_axis.cross(x_axis)).normalized();
-                Eigen::Matrix3d body_R_FLU;
-                body_R_FLU.block<3, 1>(0, 0) = x_axis;
-                body_R_FLU.block<3, 1>(0, 1) = y_axis;
-                body_R_FLU.block<3, 1>(0, 2) = z_axis;
+                Eigen::Matrix3d body_R_world;
+                body_R_world.block<3, 1>(0, 0) = x_axis;
+                body_R_world.block<3, 1>(0, 1) = y_axis;
+                body_R_world.block<3, 1>(0, 2) = z_axis;
                 // TODO: check the orientation
-                currentState->q_ = body_R_FLU.transpose();
+                currentState->q_ = body_R_world.transpose();
 
                 currentState->cov_.block<6, 6>(0, 0) = Eigen::Matrix<double, 6, 6>::Identity();
                 currentState->cov_.block<3, 3>(6, 6) =
@@ -85,6 +102,8 @@ namespace MSF
                 currentState->cov_.block<3, 3>(15, 15) = Eigen::Matrix3d::Identity() * 0.01 * 0.01;
 
                 currentState->has_global_state_ = false;
+
+                std::cerr << "[msf_initializer]: Use " << (use_ned_frame_ ? "NED" : "FLU") << " frame as world frame!" << std::endl;
 
                 return true;
             }

@@ -52,3 +52,19 @@ target_link_libraries(imu_gps_fusion_node
   ${catkin_LIBRARIES}
   ${LIBS}
 )
+
+add_executable(orb_fusion_node
+src/orb_fusion.cpp)
+
+target_link_libraries(orb_fusion_node
+  ${catkin_LIBRARIES}
+  ${LIBS}
+)
+
+add_executable(mocap_fusion_node
+src/mocap_fusion.cpp)
+
+target_link_libraries(mocap_fusion_node
+  ${catkin_LIBRARIES}
+  ${LIBS}
+)

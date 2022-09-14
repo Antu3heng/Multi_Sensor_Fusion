@@ -13,6 +13,7 @@ namespace MSF
     {
         is_use_fixed_noise_ = false;
         has_init_transformation_ = false;
+        cov_for_T_bs_ = cov_for_T_lg_ = Eigen::Matrix<double, 6, 6>::Identity();
         cov_for_T_bs_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.1 * 0.1;
         cov_for_T_bs_.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;
         cov_for_T_lg_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 10.0 * 10.0;

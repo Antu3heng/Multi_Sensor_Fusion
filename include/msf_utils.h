@@ -69,6 +69,12 @@ namespace MSF
         return cur_lla;
     }
 
+    template<typename Derived>
+    inline bool is_nan(const Eigen::MatrixBase<Derived>& x)
+    {
+        return ((x.array() == x.array())).all();
+    }
+
 } // namespace multiSensorFusion
 
 #endif //MULTI_SENSOR_FUSION_MSF_UTILS_H

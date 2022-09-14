@@ -21,6 +21,7 @@ namespace MSF
               local_p_global_(std::move(local_p_global)), local_q_global_(local_q_global)
     {
         is_use_fixed_noise_ = false;
+        cov_for_T_bs_ = cov_for_T_lg_ = Eigen::Matrix<double, 6, 6>::Identity();
         cov_for_T_bs_.block<3, 3>(0, 0) = cov_for_T_lg_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity() * 0.1 * 0.1;
         cov_for_T_bs_.block<3, 3>(3, 3) = cov_for_T_lg_.block<3, 3>(3, 3) =
                 Eigen::Matrix3d::Identity() * 5.0 * degreeToRadian * 5.0 * degreeToRadian;

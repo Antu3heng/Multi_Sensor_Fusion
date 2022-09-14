@@ -29,6 +29,10 @@ namespace MSF
 
         ~msf_initializer() = default;
 
+        void setWorldFrameAsNED();
+
+        void setGravityNorm(double gravity_norm);
+
         void addIMU(const imuDataPtr &data);
 
         bool initialize(const baseDataPtr &data, baseStatePtr &currentState);
@@ -37,6 +41,8 @@ namespace MSF
         std::map<double, imuDataPtr> imu_buffer_;
         int imu_buffer_size_;
         double imu_acc_std_limit_;
+        bool use_ned_frame_ = false;
+        double gravity_norm_ = -1.0;
     };
 }
 

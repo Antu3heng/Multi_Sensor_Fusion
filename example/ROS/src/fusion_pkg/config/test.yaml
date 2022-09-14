@@ -1,0 +1,20 @@
+imu:
+  body_q_imu: [0.5, -0.5, 0.5, -0.5] # [q]
+  acc_noise_density: 1.8032560209070164e-02
+  acc_random_walk: 4.9098209065407837e-04
+  gyr_noise_density: 2.1483047214801627e-03
+  gyr_random_walk: 1.5036495212638137e-05
+  initializer_buffer_size: 200
+  initializer_max_acc_std: 3.0
+
+pose_sensor:
+  quantity: 1
+  sensor1:
+    name: "mocap"
+    # body_T_sensor: [ -0.0618112, -0.0178466, 0.105516, 0.0051576, -0.0028813, -0.0006538, 0.9999823 ]
+    body_T_sensor: [ -0.0618112, -0.0178466, 0.105516, 0.0, 0.0, 0.0, 1.0 ]
+    input_with_cov: 0
+    n_pos: 0.1
+    n_q: 1
+    use_for_initial: 0
+    use_for_global: 1
